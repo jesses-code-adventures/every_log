@@ -1,0 +1,4 @@
+tmp_dir=$(cat dev/scripts/tmp_dir)
+file="${tmp_dir}/cookie"
+token=$(cat "$file")
+echo $token

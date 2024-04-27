@@ -53,3 +53,19 @@ ORDER BY 1;`
 	}
 	return resp, nil
 }
+
+func (db Db) GetCurrentUser() ([]byte, error) {
+	query := `SELECT current_user;`
+	var user string
+	err := db.Db.QueryRow(query).Scan(&user)
+	if err != nil {
+		fmt.Println(err)
+		return []byte{}, err
+	}
+	resp := struct {
+		User string `json:"user"`
+	}{
+		User: user,
+	}
+	return json.Marshal(resp)
+}

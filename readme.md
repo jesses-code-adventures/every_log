@@ -57,23 +57,35 @@ The endpoints are as follows. Endpoint parameters assume user_id and an authoriz
 
 They are also ordered in the way a first time user would set themselves up in the CLI, and the way the onboarding flow should work.
 
-- [x] CreateUser(email, first_name, optional last_name, optional mobile_number) -> user_id
+#### No auth
+
+- [x] POST /user (email, first_name, optional last_name, optional mobile_number) -> user_id
       From here, every endpoint should include user_id in the request header
-- [x] Authenticate(email, password) -> authorization_token
-- [ ] Authorize(authorization_token) -> authorization_token (internal, for handling authorization token in header)
-      From here, every endpoint should include token in the request header
-- [ ] CreateProject(user_id, name, optional description) -> project_id
-- [ ] GetKey(email, password) -> api\*key
-      From here, users can do things in any order
-- [ ] CreateOrg(name) -> org_id
-- [ ] SetUserLocation(address1, city, state, country, optional latitude, optional longitude, optional address2) -> location_id
-- [ ] SetOrgLocation(address1, city, state, country, optional latitude, optional longitude, optional address2) -> location_id
-- [ ] CreateInvite(from_user_id, to_user_id, optional project_id, optional org_id) -> invite_id (api will need to validate that the user has permission to invite the other user. they will have to either be the creator of the project, or an admin/owner of the that collaborates on it.)
-- [ ] AcceptInvite(invite_id) -> permitted_project_id
-- [ ] CreateLog(level_id, project_id, message, optional process_id, optional traceback)
-- [ ] GetLogs(optional projectId, optional level_id, optional process_id, optional org_id, optional from_datetime, optional to_datetime) -> Array<Log>
-- [ ] GetProjects(optional org_id) -> Array<Project>
-- [ ] GetProjectsAndOrgs() -> {"projects": Array<Project>, "orgs": Array<Org>}
+
+#### Authentication auth (email/password currently)
+
+- [x] POST /authenticate(email, password) -> authorization_token
+- [x] POST /authorize(authorization_token) -> authorization_token (internal, for handling authorization token in header)
+
+#### User auth (token)
+
+Note any of these endpoints could return an unauthorized if the token has expired.
+
+- [ ] POST /project (user_id, name, optional description) -> project_id (New Project)
+- [ ] POST /project/{project_id}/key (email, password) -> api_key (Get API key for project)
+- [ ] POST /log (level_id, project_id, message, optional process_id, optional traceback) (Create Log)
+- [ ] GET /log (optional projectId, optional level_id, optional process_id, optional org_id, optional from_datetime, optional to_datetime) -> Array<Log> (Get Logs)
+- [ ] GET /log/{log_id} (Get log)
+- [ ] POST /user/location (address1, city, state, country, optional latitude, optional longitude, optional address2) -> location_id (Set user location)
+- [ ] POST /org (name) -> org_id (Create Org)
+- [ ] GET /project -> Array<Project> (Get projects the user has access to, optionally filtering by org they belong to)
+- [ ] GET /filterItems GetProjectsAndOrgs() -> {"projects": Array<Project>, "orgs": Array<Org>}
+
+#### Org auth (token and user that has accepted an org invite)
+
+- [ ] POST /org/{id}/invite/{user_id} (from_user_id, to_user_id, optional project_id, optional org_id) -> invite_id (Create invitation to org)
+- [ ] POST /org/{id}/invite/{invite_id} (invite_id) -> permitted_project_id (Accept/decline invitation to org)
+- [ ] POST /org/{id}/location (address1, city, state, country, optional latitude, optional longitude, optional address2) -> location_id (Set Org Location)
 
 ### postgres database
 

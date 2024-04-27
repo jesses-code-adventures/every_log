@@ -2,13 +2,13 @@
 
 tmp_dir=$(cat dev/scripts/tmp_dir) # Correct command substitution
 file="${tmp_dir}/cookie" # Concatenate the directory with the file name
-
 token=$(cat "$file") # Use double quotes for file reference
+user_id=$(cat dev/scripts/user_id)
 
 curl -X POST \
     -H "Content-Type: application/json" \
     -H "Accept: application/json" \
-    -H "user_id: e6394e86-d0a4-4207-baf5-2fe9918e4381" \
+    -H "user_id: ${user_id}" \
     -H "Authorization: Bearer ${token}" \
     -b "token=${token}" \
     -d '{"token": "'"${token}"'"}' \

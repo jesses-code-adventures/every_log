@@ -110,7 +110,6 @@ func (a AuthenticationHandler) authenticate(r incomingAuthenticationData) ([]byt
 	return jsonBytes, cookie, nil
 }
 
-
 func (a AuthenticationHandler) checkAuthenticated(r incomingAuthenticationData) error {
 	isAuthenticated, err := a.Db.Authenticate(r.UserId, r.Password)
 	if err != nil {
@@ -177,4 +176,3 @@ func newIncomingAuthenticationData(r *http.Request) (incomingAuthenticationData,
 	}
 	return incomingAuthenticationData{UserId: user_id, Email: decodedBody.Email, Password: decodedBody.Password}, nil
 }
-

@@ -1,3 +1,5 @@
 #!/bin/zsh
 
-dev/scripts/authenticate -e test@email.com -p hello -u "e6394e86-d0a4-4207-baf5-2fe9918e4381"
+user_id=$(cat dev/scripts/user_id)
+
+dev/scripts/authenticate -e test@email.com -p hello -u $user_id

@@ -47,7 +47,6 @@ func (u UserHandler) ServeJson(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-
 // Creates a new user in the db and returns their id in a JSON response
 func (u UserHandler) createUser(r *http.Request) ([]byte, error) {
 	arr := make([]byte, 0)

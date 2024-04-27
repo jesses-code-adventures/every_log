@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
@@ -38,6 +39,14 @@ func NewDb() Db {
 	if err != nil {
 		panic(err)
 	}
+	_, err = db.Exec("SET search_path TO public;")
+	if err != nil {
+		panic(err)
+	}
+	err = db.Ping()
+	if err != nil {
+		panic(err)
+	}
 	return Db{db}
 }
 
@@ -61,7 +70,7 @@ func (db Db) CreateUser(email string, first_name string, last_name *string, pass
 	var pii_id string
 	err = tx.QueryRow("INSERT INTO user_pii (user_id, email, first_name, last_name, password) VALUES ($1, $2, $3, $4, $5) RETURNING id", user_id, email, first_name, last_name, password).Scan(&pii_id)
 	if err != nil {
-		if err.Error() == "pq: duplicate key value violates unique constraint \"user_pii_email_key\"" {
+		if strings.Contains(err.Error(), "duplicate") {
 			tx.Rollback()
 			return "", fmt.Errorf("Email already exists")
 		}
@@ -81,4 +90,35 @@ func (db Db) CreateUser(email string, first_name string, last_name *string, pass
 		return "", err
 	}
 	return user_id, nil
+}
+
+func (db Db) CreateProject(user_id string, name string, description *string) (string, error) {
+	tx, err := db.Db.Begin()
+	if err != nil {
+		fmt.Println(err)
+		return "", err
+	}
+	var project_id string
+	err = tx.QueryRow("INSERT INTO project (user_id, name, description) VALUES ($1, $2, $3) RETURNING id", user_id, name, description).Scan(&project_id)
+	if err != nil {
+		if strings.Contains(err.Error(), "duplicate") {
+			tx.Rollback()
+			return "", fmt.Errorf("Project already exists")
+		}
+		fmt.Println(err)
+		tx.Rollback()
+		return "", err
+	}
+	_, err = tx.Exec("INSERT INTO permitted_project (user_id, project_id) VALUES ($1, $2)", user_id, project_id)
+	if err != nil {
+		fmt.Println(err)
+		tx.Rollback()
+		return "", err
+	}
+	err = tx.Commit()
+	if err != nil {
+		fmt.Println(err)
+		return "", err
+	}
+	return project_id, nil
 }

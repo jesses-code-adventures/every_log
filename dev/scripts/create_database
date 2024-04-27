@@ -1,0 +1,8 @@
+#!/bin/zsh
+
+# Set the PGPASSFILE environment variable to the local .pgpass file
+export PGPASSFILE="$(pwd)/.pgpass"
+
+# Display the current value of PGPASSFILE
+echo "Using PGPASSFILE: $PGPASSFILE"
+psql -f "$(pwd)/sql/create_database.sql" -U postgres

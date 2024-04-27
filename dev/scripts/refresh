@@ -1,0 +1,7 @@
+#!/bin/zsh
+
+dev/scripts/drop_database
+dev/scripts/create_database
+dev/scripts/create_tables
+dev/scripts/create_dev_db_user
+dev/scripts/grant_dev_perms

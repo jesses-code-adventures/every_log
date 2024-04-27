@@ -1,3 +1,3 @@
 #!/bin/zsh
 
-dev/scripts/create_user -f jesse -l williams -e test@email.com -p hello
+dev/scripts/create_user -f jesse -l williams -e test@email.com -p hello | jq -r ".id" > dev/scripts/user_id

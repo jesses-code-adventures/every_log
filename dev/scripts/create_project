@@ -1,0 +1,31 @@
+#!/bin/zsh
+
+# Parse command-line flags
+while getopts n:d:t:u: flag
+do
+    case "${flag}" in
+        n) name="${OPTARG}";;
+        d) description="${OPTARG}";;
+        t) token="${OPTARG}";;
+        u) user_id="${OPTARG}";;
+        *) echo "Invalid flag"; exit 1;;
+    esac
+done
+
+# Ensure all required flags are provided
+if [ -z "${name}" ] || [ -z "${token}" ] || [ -z "${user_id}" ]; then
+    echo "Missing required flags: name, token, or user_id"
+    exit 1
+fi
+
+echo "Creating project with name: ${name}, description: ${description}, token: ${token}, user_id: ${user_id}"
+
+# Send data using curl with interpolated variables
+response=$(curl -X POST \
+     -H "Content-Type: application/json" \
+     -H "Accept: application/json" \
+     -H "user_id: ${user_id}" \
+     -b "token=${token}" \
+     -d '{"name": "'"${name}"'", "description": "'"${description}"'"}' \
+     localhost:8080/project)
+echo $response

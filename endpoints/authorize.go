@@ -15,6 +15,11 @@ import (
 	"github.com/joho/godotenv"
 )
 
+type AuthorizationMiddleware interface {
+	Authorize(w http.ResponseWriter, r *http.Request) error
+	ServeHTTP(w http.ResponseWriter, r *http.Request)
+}
+
 type AuthorizationHandler struct {
 	Db          *db.Db
 	signing_key string
@@ -44,16 +49,10 @@ func (a AuthorizationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	}
 }
 
-
 func (a AuthorizationHandler) ServeJson(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodPost:
-		post, err := newIncomingPostDataAuthorize(r)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-		err = a.authenticate(post)
+		err := a.Authorize(w, r)
 		if err != nil {
 			if err.Error() == "Db error" || err.Error() == "failed to convert to JSON" {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -78,17 +77,22 @@ func (a AuthorizationHandler) ServeJson(w http.ResponseWriter, r *http.Request) 
 
 // Ensures the user's authentication credentials are correct and returns a JWT token
 // The user should include this token in the Authorization header of future requests
-func (a AuthorizationHandler) authenticate(r incomingAuthorizationData) error {
+func (a AuthorizationHandler) Authorize(w http.ResponseWriter, r *http.Request) error {
+	post, err := newIncomingPostDataAuthorize(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return err
+	}
 	tx, err := a.Db.Db.Begin()
 	if err != nil {
 		return err
 	}
-	err = a.checkAuthorized(r)
+	err = a.checkAuthorized(post)
 	if err != nil {
 		tx.Rollback()
 		return err
 	}
-	claims, err := a.decodeJWT(r.Token)
+	claims, err := a.decodeJWT(post.Token)
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -143,7 +147,6 @@ func (a *AuthorizationHandler) decodeJWT(tokenString string) (*Claims, error) {
 	return nil, fmt.Errorf("invalid token")
 }
 
-
 type incomingAuthorizationData struct {
 	UserId string `json:"user_id"`
 	Token  string `json:"token"`
@@ -178,4 +181,3 @@ func newIncomingPostDataAuthorize(r *http.Request) (incomingAuthorizationData, e
 	}
 	return incomingAuthorizationData{UserId: user_id, Token: strings.TrimPrefix(decodedBody.Token, "Bearer: ")}, nil
 }
-

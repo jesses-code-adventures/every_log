@@ -1,5 +1,5 @@
 CREATE DATABASE everylog;
-\c everylog;
+\c everylog
 
 -- Create table for locations first as it's referenced in other tables
 CREATE TABLE IF NOT EXISTS location (
@@ -80,17 +80,22 @@ CREATE TABLE IF NOT EXISTS authorization_token (
 CREATE TABLE IF NOT EXISTS project_org (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
     org_id UUID,
+    project_id UUID,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (org_id) REFERENCES org(id)
+    FOREIGN KEY (org_id) REFERENCES org(id),
+    FOREIGN KEY (project_id) REFERENCES project(id)
 );
 
 -- Create table for permitted projects (many-to-many)
+-- Must have a user_id and a project_id
+-- Server should ensure user_id has permission to be added to project_id
+-- This should be via an invite
 CREATE TABLE IF NOT EXISTS permitted_project (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-    user_id UUID,
-    project_org_id UUID,
+    project_id UUID NOT NULL,
+    user_id UUID NOT NULL,
     FOREIGN KEY (user_id) REFERENCES single_user(id),
-    FOREIGN KEY (project_org_id) REFERENCES project_org(id)
+    FOREIGN KEY (project_id) REFERENCES project(id)
 );
 
 -- Create table for invites

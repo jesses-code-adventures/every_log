@@ -1,0 +1,5 @@
+#!/bin/zsh
+
+token=$(dev/scripts/get_token)
+user_id=$(cat dev/scripts/user_id)
+dev/scripts/create_project -n "test project" -d "hi i am a description" -u $user_id -t $token
