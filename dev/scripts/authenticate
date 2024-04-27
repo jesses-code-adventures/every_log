@@ -1,0 +1,52 @@
+#!/bin/bash
+
+# Parse command-line flags
+while getopts e:p:u: flag
+do
+    case "${flag}" in
+        e) email="${OPTARG}";;
+        p) password="${OPTARG}";;
+        u) user_id="${OPTARG}";;
+        *) echo "Invalid flag"; exit 1;;
+    esac
+done
+
+# Ensure all required flags are provided
+if [ -z "${email}" ] || [ -z "${user_id}" ] || [ -z "${password}" ]; then
+    echo "Missing required flags: email, user_id, or password"
+    exit 1
+fi
+
+# Send data using curl with interpolated variables
+response=$(curl -X POST \
+     -H "Content-Type: application/json" \
+     -H "Accept: application/json" \
+     -H "user_id: ${user_id}" \
+     -d '{"email": "'"${email}"'", "password": "'"${password}"'"}' \
+     localhost:8080/authenticate)
+
+# Extract the token from the JSON response
+token=$(echo "$response" | jq -r '.token')
+
+# Directory for temporary files (create if it doesn't exist)
+tmp_dir=$(cat dev/scripts/tmp_dir)
+# Verify that tmp_dir has a value
+if [ -z "$tmp_dir" ]; then
+    echo "Failed to get the directory name from the script."
+    exit 1
+fi
+mkdir -p "$tmp_dir"
+
+# Path to the file where the token will be saved
+token_file="$tmp_dir/cookie"
+
+# Check if a token was successfully retrieved
+if [ -z "$token" ]; then
+    echo "Failed to retrieve token from response: $response"
+    exit 1
+fi
+
+# Save the token to the temporary file
+echo "$token" > "$token_file"
+
+echo "Token saved to $token_file"

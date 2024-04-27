@@ -18,7 +18,8 @@ CREATE TABLE IF NOT EXISTS location (
 CREATE TABLE IF NOT EXISTS single_user (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
     pii_id UUID,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    token TEXT
 );
 
 

@@ -29,3 +29,15 @@ func (t CheckHandler) ServeJson(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
 }
+
+func (t CheckHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	accept := r.Header.Get("Accept")
+	switch accept {
+	case "application/json":
+		t.ServeJson(w, r)
+		return
+	default:
+		w.WriteHeader(http.StatusNotAcceptable)
+		return
+	}
+}

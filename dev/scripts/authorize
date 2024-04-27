@@ -1,0 +1,5 @@
+#!/bin/zsh
+
+file="$(cat dev/scripts/tmp_dir)/cookie"
+token="$(cat $file)"
+

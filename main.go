@@ -8,14 +8,15 @@ import (
 )
 
 type ServerHandler struct {
-	db    *db.Db
-	user  endpoints.UserHandler
-	table endpoints.TableHandler
-	check endpoints.CheckHandler
+	db           *db.Db
+	user         endpoints.UserHandler
+	table        endpoints.TableHandler
+	check        endpoints.CheckHandler
+	authenticate endpoints.AuthenticationHandler
 }
 
 func NewServerHandler(db *db.Db) ServerHandler {
-	return ServerHandler{db: db, user: endpoints.UserHandler{Db: db}, table: endpoints.TableHandler{Db: db}, check: endpoints.CheckHandler{Db: db}}
+	return ServerHandler{db: db, user: endpoints.UserHandler{Db: db}, table: endpoints.TableHandler{Db: db}, check: endpoints.CheckHandler{Db: db}, authenticate: endpoints.AuthenticationHandler{Db: db}}
 }
 
 func (s *ServerHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -23,38 +24,20 @@ func (s *ServerHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if basicErr != nil {
 		return
 	}
-	uri := r.URL.Path
-	accept := r.Header.Get("Accept")
-	switch uri {
+	path := r.URL.Path
+	switch path {
 	case "/":
-		w.Write([]byte("Hello World"))
+		w.Write([]byte(`Welcome to every_log!
+Start by creating a user by sending a POST request to /user. The body of your request should be a JSON object of {"email": $1, "password": $2}. You will receive a user_id
+You can create a user by sending a POST request to /user, get a list of tables by sending a GET request to /table, and check if a table exists by sending a GET request to /check.`))
 	case "/user":
-		switch accept {
-		case "application/json":
-			s.user.ServeJson(w, r)
-			return
-		default:
-			w.WriteHeader(http.StatusNotAcceptable)
-			return
-		}
+		s.user.ServeHTTP(w, r)
 	case "/table":
-		switch accept {
-		case "application/json":
-			s.table.ServeJson(w, r)
-			return
-		default:
-			w.WriteHeader(http.StatusNotAcceptable)
-			return
-		}
+		s.table.ServeHTTP(w, r)
 	case "/check":
-		switch accept {
-		case "application/json":
-			s.check.ServeJson(w, r)
-			return
-		default:
-			w.WriteHeader(http.StatusNotAcceptable)
-			return
-		}
+		s.check.ServeHTTP(w, r)
+	case "/authenticate":
+		s.authenticate.ServeHTTP(w, r)
 	}
 }
 

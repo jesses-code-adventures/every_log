@@ -69,3 +69,15 @@ func (u UserHandler) ServeJson(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
 }
+
+func (u UserHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	accept := r.Header.Get("Accept")
+	switch accept {
+	case "application/json":
+		u.ServeJson(w, r)
+		return
+	default:
+		w.WriteHeader(http.StatusNotAcceptable)
+		return
+	}
+}

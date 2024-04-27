@@ -84,6 +84,38 @@ func (db Db) CreateUser(email string, first_name string, last_name *string, pass
 	return user_id, nil
 }
 
+func (db Db) Authenticate(user_id string, password string) (bool, error) {
+	var storedPassword string
+	err := db.Db.QueryRow("SELECT password FROM user_pii WHERE user_id = $1", user_id).Scan(&storedPassword)
+	if err != nil {
+		fmt.Println(err)
+		return false, err
+	}
+	fmt.Println(storedPassword)
+	fmt.Println(password)
+	// TODO: Implement password hashing
+	return storedPassword == password, nil
+}
+
+// Pass nil as tx to execute with the default db connection
+// Pass a transaction to execute within that transaction
+func (db Db) UpdateUserToken(user_id string, token string, tx *sql.Tx) bool {
+	if tx != nil {
+		_, err := tx.Exec("UPDATE single_user SET token = $1 WHERE id = $2", token, user_id)
+		if err != nil {
+			fmt.Println(err)
+			return false
+		}
+		return true
+	}
+	_, err := db.Db.Exec("UPDATE single_user SET token = $1 WHERE id = $2", token, user_id)
+	if err != nil {
+		fmt.Println(err)
+		return false
+	}
+	return true
+}
+
 func (db Db) CheckTableExists(name string) ([]byte, error) {
 	query := fmt.Sprintf("SELECT table_name FROM information_schema.tables WHERE table_name = '%s';", name)
 	var table_name string

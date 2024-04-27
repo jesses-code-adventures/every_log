@@ -49,50 +49,32 @@ def hello_world():
 - A user will generate a new api key for each project they work on. As such the Api Key will be related to PermittedProject to ensure a user can have max 1 API key per project.
 - Expiration time is omitted from the AuthorizationToken model so that it can be derived from the created_at on the server.
 
-### postgres database
-
-- User id, pii_id, created_at
-- UserPii id, user_id, email, first_name, optional last_name, optional location_id (should have a relation to Location), optional mobile_number (string)
-- AuthorizationToken id, created_at, unique api_key_id, token (will be a JWT)
-- Org id, name, created_at, optional location_id (should have a relation to Location)
-- Location id, address1, optional address2, city, state, country, optional latitude, optional longitude (combination of address1, address2, city, state, country should be unique)
-- UserOrg id, user_id, org_id (combination of user_id and org_id should be unique), created_at (UserOrg is a many-to-many relation table linking User and Org), level (string literal of 'owner' | 'admin' | 'basic')
-- Project id, user_id, name, created_at, optional description
-- ProjectOrg id, org_id, created_at (ProjectOrg is a many-to-many relation table linking Project and Org)
-- PermittedProject id, user_id, optional project_org_id (PermittedProject is a many-to-many relation table ensuring users who have permission to access projects are part of orgs that can access the project)
-- Invite id, from_user_id, to_user_id, status (string literal, any of 'accepted' | 'pending' | 'declined' | 'expired'), optional project_id, optional org_id (there must be one of project_id or org_id)
-- ApiKey id, unique permitted_project_id (relation to PermittedProject ensuring one key can be created per project permission), key (should be a string of any length)
-- Process id, project_id (relation to Project), name, created_at (combination of name and project_id should be unique)
-- Log id, created_at, project_id, level_id, optional process_id, message, optional traceback
-- LogLevel id (this particular id should be an integer as it will be an enum with values 100-1000), value (string)
-
 ### server apis
 
 All requests should require an Accept header of "application/json" so they can be expanded to return html later.
-A 422 should be returned for:
-
-- Missing Accept header
-- Incorrectly typed data
-- Missing required fields
-
-A 401 should be returned for:
-
-- Expired token (token created_at is > created_at + server defined expiration timedelta)
-- Authorization token is not linked to an API key with permission to access the project.
 
 The endpoints are as follows. Endpoint parameters assume user_id and an authorization_token are passed in the request headers.
 
-- Authorize(user_id, api_key) -> authorization_token
-- CreateUser(email, first_name, optional last_name, optional mobile_number) -> user_id
-- SetUserLocation(address1, city, state, country, optional latitude, optional longitude, optional address2) -> location_id
-- CreateOrg(name) -> org_id
-- SetOrgLocation(address1, city, state, country, optional latitude, optional longitude, optional address2) -> location_id
-- CreateProject(user_id, name, optional description) -> project_id
-- CreateInvite(from_user_id, to_user_id, optional project_id, optional org_id) -> invite_id (api will need to validate that the user has permission to invite the other user. they will have to either be the creator of the project, or an admin/owner of the that collaborates on it.)
-- AcceptInvite(invite_id) -> permitted_project_id
-- CreateLog(level_id, project_id, message, optional process_id, optional traceback)
-- GetLogs(optional projectId, optional level_id, optional process_id, optional org_id, optional from_datetime, optional to_datetime) -> Array<Log>
-- GetProjects(optional org_id) -> Array<Project>
+They are also ordered in the way a first time user would set themselves up in the CLI, and the way the onboarding flow should work.
+
+- [x] CreateUser(email, first_name, optional last_name, optional mobile_number) -> user_id
+- [x] Authenticate(user_id, password) -> authorization_token
+- [ ] CreateProject(user_id, name, optional description) -> project_id
+- [ ] GetKey(email, password) -> api\*key
+      From here, users can do things in any order
+- [ ] CreateOrg(name) -> org_id
+- [ ] SetUserLocation(address1, city, state, country, optional latitude, optional longitude, optional address2) -> location_id
+- [ ] SetOrgLocation(address1, city, state, country, optional latitude, optional longitude, optional address2) -> location_id
+- [ ] CreateInvite(from_user_id, to_user_id, optional project_id, optional org_id) -> invite_id (api will need to validate that the user has permission to invite the other user. they will have to either be the creator of the project, or an admin/owner of the that collaborates on it.)
+- [ ] AcceptInvite(invite_id) -> permitted_project_id
+- [ ] CreateLog(level_id, project_id, message, optional process_id, optional traceback)
+- [ ] GetLogs(optional projectId, optional level_id, optional process_id, optional org_id, optional from_datetime, optional to_datetime) -> Array<Log>
+- [ ] GetProjects(optional org_id) -> Array<Project>
+- [ ] GetProjectsAndOrgs() -> {"projects": Array<Project>, "orgs": Array<Org>}
+
+### postgres database
+
+Schema can be found in [the create tables sql file](sql/create_tables.sql).
 
 ### SDK implementations
 
@@ -102,7 +84,7 @@ The SDK should have an internal private function such as HandleRequest that eith
 - Catch any 401 responses from the API, and if there is a 401 refresh the AuthorizationToken and retry. Raise an error if another 401 is returned.
 - Raise for any other response codes > 400
 
-### Admin Panel
+### Admin Panel (Frontend)
 
 #### Navigation
 
