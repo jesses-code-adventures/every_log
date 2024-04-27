@@ -58,7 +58,10 @@ The endpoints are as follows. Endpoint parameters assume user_id and an authoriz
 They are also ordered in the way a first time user would set themselves up in the CLI, and the way the onboarding flow should work.
 
 - [x] CreateUser(email, first_name, optional last_name, optional mobile_number) -> user_id
-- [x] Authenticate(user_id, password) -> authorization_token
+      From here, every endpoint should include user_id in the request header
+- [x] Authenticate(email, password) -> authorization_token
+- [ ] Authorize(authorization_token) -> authorization_token (internal, for handling authorization token in header)
+      From here, every endpoint should include token in the request header
 - [ ] CreateProject(user_id, name, optional description) -> project_id
 - [ ] GetKey(email, password) -> api\*key
       From here, users can do things in any order

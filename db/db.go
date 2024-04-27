@@ -91,10 +91,18 @@ func (db Db) Authenticate(user_id string, password string) (bool, error) {
 		fmt.Println(err)
 		return false, err
 	}
-	fmt.Println(storedPassword)
-	fmt.Println(password)
 	// TODO: Implement password hashing
 	return storedPassword == password, nil
+}
+
+func (db Db) Authorize(user_id string, token string) (bool, error) {
+	var storedToken string
+	err := db.Db.QueryRow("SELECT token FROM single_user WHERE id = $1", user_id).Scan(&storedToken)
+	if err != nil {
+		fmt.Println(err)
+		return false, err
+	}
+	return storedToken == token, nil
 }
 
 // Pass nil as tx to execute with the default db connection

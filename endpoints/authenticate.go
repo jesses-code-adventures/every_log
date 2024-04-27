@@ -23,26 +23,22 @@ type postRequestData struct {
 	Password string `json:"password"`
 }
 
-func createJWT(userID string, email string, password string, secretKey string) (string, error) {
-	// Define custom claims
+func createJWT(userID string, email string, password string, secretKey string) (string, time.Time, error) {
+	issued := time.Now()
+	expires := issued.Add(time.Minute * EXPIRATION_MINUTES)
 	claims := jwt.MapClaims{
 		"user_id":  userID,
 		"email":    email,
 		"password": password,
-		"iat":      time.Now().Unix(), // Issued at
-		"exp":      time.Now().Add(time.Minute * EXPIRATION_MINUTES).Unix(),
+		"iat":      issued.Unix(),
+		"exp":      expires.Unix(),
 	}
-
-	// Create a new token with the claims and signing method
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-
-	// Sign the token with a secret key
 	signedToken, err := token.SignedString([]byte(secretKey))
 	if err != nil {
-		return "", err
+		return "", time.Time{}, err
 	}
-
-	return signedToken, nil
+	return signedToken, expires, nil
 }
 
 func newPostRequestData(r *http.Request) (postRequestData, error) {
@@ -96,49 +92,64 @@ func (a AuthenticationHandler) checkAuthenticated(r postRequestData) error {
 // Ensures the user's authentication credentials are correct and returns a JWT token
 // The JWT token will be stored in the db and returned in the response
 // The user should include this token in the Authorization header of future requests
-func (a AuthenticationHandler) Authenticate(r postRequestData) ([]byte, error) {
+func (a AuthenticationHandler) Authenticate(r postRequestData) ([]byte, *http.Cookie, error) {
 	tx, err := a.Db.Db.Begin()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	err = a.checkAuthenticated(r)
 	if err != nil {
 		tx.Rollback()
-		return nil, err
+		return nil, nil, err
 	}
-	token, err := createJWT(r.UserId, r.Email, r.Password, a.signing_key)
+	token, expires, err := createJWT(r.UserId, r.Email, r.Password, a.signing_key)
 	updated := a.Db.UpdateUserToken(r.UserId, token, tx)
 	if !updated {
 		tx.Rollback()
-		return []byte{}, errors.New("Db error")
+		return []byte{}, nil, errors.New("Db error")
 	}
 	response := struct {
 		Token string `json:"token"`
 	}{
-		Token: fmt.Sprintf("Bearer: %s", token),
+		Token: token,
 	}
 	jsonBytes, err := json.Marshal(response)
 	if err != nil {
 		tx.Rollback()
-		return nil, errors.New("failed to convert response to json")
+		return nil, nil, errors.New("failed to convert response to json")
 	}
 	err = tx.Commit()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return jsonBytes, nil
+	cookie := getAuthCookie(token, expires)
+	return jsonBytes, cookie, nil
+}
+
+func getAuthCookie(token string, expires time.Time) *http.Cookie {
+	return &http.Cookie{
+		Name:     "every_log_auth_token",
+		Value:    token, // Your session ID or token
+		Path:     "/",
+		Expires:  expires,
+		HttpOnly: true,
+		Secure:   true,
+	}}
+
+func setCookieHandler(w http.ResponseWriter, cookie *http.Cookie) {
+	// Set the cookie in the HTTP response
+	http.SetCookie(w, cookie)
 }
 
 func (a AuthenticationHandler) ServeJson(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodPost:
 		post, err := newPostRequestData(r)
-		fmt.Println(post)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		id, err := a.Authenticate(post)
+		resp, cookie, err := a.Authenticate(post)
 		if err != nil {
 			if err.Error() == "Db error" || err.Error() == "failed to convert to JSON" {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -151,8 +162,10 @@ func (a AuthenticationHandler) ServeJson(w http.ResponseWriter, r *http.Request)
 				return
 			}
 		}
+		// TODO: test the cookies are being set properly
+		setCookieHandler(w, cookie)
 		w.Header().Set("Content-Type", "application/json")
-		w.Write(id)
+		w.Write(resp)
 	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}

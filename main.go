@@ -13,10 +13,18 @@ type ServerHandler struct {
 	table        endpoints.TableHandler
 	check        endpoints.CheckHandler
 	authenticate endpoints.AuthenticationHandler
+	authorize    endpoints.AuthorizationHandler
 }
 
 func NewServerHandler(db *db.Db) ServerHandler {
-	return ServerHandler{db: db, user: endpoints.UserHandler{Db: db}, table: endpoints.TableHandler{Db: db}, check: endpoints.CheckHandler{Db: db}, authenticate: endpoints.AuthenticationHandler{Db: db}}
+	return ServerHandler{
+		db: db,
+		user: endpoints.UserHandler{Db: db},
+		table: endpoints.TableHandler{Db: db},
+		check: endpoints.CheckHandler{Db: db},
+		authenticate: endpoints.AuthenticationHandler{Db: db},
+		authorize: endpoints.AuthorizationHandler{Db: db},
+	}
 }
 
 func (s *ServerHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -38,6 +46,8 @@ You can create a user by sending a POST request to /user, get a list of tables b
 		s.check.ServeHTTP(w, r)
 	case "/authenticate":
 		s.authenticate.ServeHTTP(w, r)
+	case "/authorize":
+		s.authorize.ServeHTTP(w, r)
 	}
 }
 
