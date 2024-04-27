@@ -12,8 +12,44 @@ type UserHandler struct {
 	Db *db.Db
 }
 
+func (u UserHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	accept := r.Header.Get("Accept")
+	switch accept {
+	case "application/json":
+		u.ServeJson(w, r)
+		return
+	default:
+		w.WriteHeader(http.StatusNotAcceptable)
+		return
+	}
+}
+
+func (u UserHandler) ServeJson(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodPost:
+		id, err := u.createUser(r)
+		if err != nil {
+			if err.Error() == "Db error" || err.Error() == "failed to convert to JSON" {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			} else if err.Error() == "Email already exists" {
+				http.Error(w, err.Error(), http.StatusConflict)
+				return
+			} else {
+				http.Error(w, err.Error(), http.StatusUnprocessableEntity)
+				return
+			}
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(id)
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+
 // Creates a new user in the db and returns their id in a JSON response
-func (u UserHandler) CreateUser(r *http.Request) ([]byte, error) {
+func (u UserHandler) createUser(r *http.Request) ([]byte, error) {
 	arr := make([]byte, 0)
 	body := r.Body
 	defer body.Close()
@@ -45,39 +81,4 @@ func (u UserHandler) CreateUser(r *http.Request) ([]byte, error) {
 		return nil, errors.New("failed to convert response to json")
 	}
 	return jsonBytes, nil
-}
-
-func (u UserHandler) ServeJson(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodPost:
-		id, err := u.CreateUser(r)
-		if err != nil {
-			if err.Error() == "Db error" || err.Error() == "failed to convert to JSON" {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			} else if err.Error() == "Email already exists" {
-				http.Error(w, err.Error(), http.StatusConflict)
-				return
-			} else {
-				http.Error(w, err.Error(), http.StatusUnprocessableEntity)
-				return
-			}
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(id)
-	default:
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-	}
-}
-
-func (u UserHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	accept := r.Header.Get("Accept")
-	switch accept {
-	case "application/json":
-		u.ServeJson(w, r)
-		return
-	default:
-		w.WriteHeader(http.StatusNotAcceptable)
-		return
-	}
 }

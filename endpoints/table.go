@@ -10,6 +10,18 @@ type TableHandler struct {
 	Db *db.Db
 }
 
+func (t TableHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	accept := r.Header.Get("Accept")
+	switch accept {
+	case "application/json":
+		t.ServeJson(w, r)
+		return
+	default:
+		w.WriteHeader(http.StatusNotAcceptable)
+		return
+	}
+}
+
 func (t TableHandler) ServeJson(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
@@ -22,17 +34,5 @@ func (t TableHandler) ServeJson(w http.ResponseWriter, r *http.Request) {
 		w.Write(resp)
 	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-	}
-}
-
-func (t TableHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	accept := r.Header.Get("Accept")
-	switch accept {
-	case "application/json":
-		t.ServeJson(w, r)
-		return
-	default:
-		w.WriteHeader(http.StatusNotAcceptable)
-		return
 	}
 }

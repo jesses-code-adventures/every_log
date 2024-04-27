@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
-	"encoding/json"
 
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
@@ -59,7 +58,7 @@ func (db Db) CreateUser(email string, first_name string, last_name *string, pass
 		tx.Rollback()
 		return "", err
 	}
-	var pii_id string;
+	var pii_id string
 	err = tx.QueryRow("INSERT INTO user_pii (user_id, email, first_name, last_name, password) VALUES ($1, $2, $3, $4, $5) RETURNING id", user_id, email, first_name, last_name, password).Scan(&pii_id)
 	if err != nil {
 		if err.Error() == "pq: duplicate key value violates unique constraint \"user_pii_email_key\"" {
@@ -83,5 +82,3 @@ func (db Db) CreateUser(email string, first_name string, last_name *string, pass
 	}
 	return user_id, nil
 }
-
-
