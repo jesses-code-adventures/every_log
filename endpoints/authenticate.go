@@ -16,7 +16,6 @@ import (
 
 const EXPIRATION_MINUTES = 60
 
-
 type postRequestData struct {
 	UserId   string `json:"user_id"`
 	Email    string `json:"email"`
@@ -50,8 +49,8 @@ func newPostRequestData(r *http.Request) (postRequestData, error) {
 	defer body.Close()
 	// Extract fields from JSON body
 	var decodedBody struct {
-		Email string `json:"email"`;
-		Password string `json:"password"`;
+		Email    string `json:"email"`
+		Password string `json:"password"`
 	}
 	err := json.NewDecoder(body).Decode(&decodedBody)
 	if err != nil {
@@ -61,7 +60,7 @@ func newPostRequestData(r *http.Request) (postRequestData, error) {
 }
 
 type AuthenticationHandler struct {
-	Db *db.Db
+	Db          *db.Db
 	signing_key string
 }
 
@@ -87,7 +86,6 @@ func (a AuthenticationHandler) checkAuthenticated(r postRequestData) error {
 	}
 	return nil
 }
-
 
 // Ensures the user's authentication credentials are correct and returns a JWT token
 // The JWT token will be stored in the db and returned in the response
@@ -134,7 +132,8 @@ func getAuthCookie(token string, expires time.Time) *http.Cookie {
 		Expires:  expires,
 		HttpOnly: true,
 		Secure:   true,
-	}}
+	}
+}
 
 func setCookieHandler(w http.ResponseWriter, cookie *http.Cookie) {
 	// Set the cookie in the HTTP response

@@ -14,7 +14,7 @@ func (db Db) CheckTableExists(name string) ([]byte, error) {
 	}
 	resp := struct {
 		Exists bool `json:"exists"`
-	} {
+	}{
 		Exists: table_name == name,
 	}
 	return json.Marshal(resp)

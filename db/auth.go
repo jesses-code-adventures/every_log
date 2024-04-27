@@ -1,8 +1,8 @@
 package db
 
 import (
-	"fmt"
 	"database/sql"
+	"fmt"
 )
 
 func (db Db) Authenticate(user_id string, password string) (bool, error) {

@@ -41,7 +41,7 @@ func newIncomingPostDataAuthorize(r *http.Request) (incomingPostDataAuthorize, e
 	defer body.Close()
 	// Extract fields from JSON body
 	var decodedBody struct {
-		Token  string `json:"token"`
+		Token string `json:"token"`
 	}
 	err := json.NewDecoder(body).Decode(&decodedBody)
 	if err != nil {
@@ -79,10 +79,10 @@ func (a AuthorizationHandler) checkAuthorized(r incomingPostDataAuthorize) error
 }
 
 type Claims struct {
-	UserID  string `json:"user_id"`
-	Email   string `json:"email"`
-	Password string `json:"password"`
-	jwt.RegisteredClaims // Includes iat, exp, etc.
+	UserID               string `json:"user_id"`
+	Email                string `json:"email"`
+	Password             string `json:"password"`
+	jwt.RegisteredClaims        // Includes iat, exp, etc.
 }
 
 // Function to decode and verify a JWT
@@ -109,10 +109,9 @@ func (a *AuthorizationHandler) decodeJWT(tokenString string) (*Claims, error) {
 	return nil, fmt.Errorf("invalid token")
 }
 
-
 // Ensures the user's authentication credentials are correct and returns a JWT token
 // The user should include this token in the Authorization header of future requests
-func (a AuthorizationHandler) Authenticate(r incomingPostDataAuthorize) (error) {
+func (a AuthorizationHandler) Authenticate(r incomingPostDataAuthorize) error {
 	tx, err := a.Db.Db.Begin()
 	if err != nil {
 		return err
@@ -127,7 +126,7 @@ func (a AuthorizationHandler) Authenticate(r incomingPostDataAuthorize) (error) 
 		tx.Rollback()
 		return err
 	}
-		if claims.ExpiresAt.Time.Before(time.Now()) {
+	if claims.ExpiresAt.Time.Before(time.Now()) {
 		// Roll back the transaction
 		tx.Rollback()
 		return errors.New("token expired")
