@@ -1,59 +1,71 @@
 package main
 
 import (
-	// "crypto/ecdsa"
-	"errors"
-	// "github.com/golang-jwt/jwt/v5"
-	"github.com/jesses-code-adventures/every_log/db"
 	"net/http"
+
+	"github.com/jesses-code-adventures/every_log/db"
+	"github.com/jesses-code-adventures/every_log/endpoints"
 )
 
 type ServerHandler struct {
-	db db.Db
+	db    *db.Db
+	user  endpoints.UserHandler
+	table endpoints.TableHandler
+	check endpoints.CheckHandler
 }
 
-// func (s *ServerHandler) GenerateToken() jwt.Token {
-// 	t := jwt.NewWithClaims(jwt.SigningMethodES256,
-// 		jwt.MapClaims{})
-// 	s, err := t.SignedString(key)
-// 	if err != nil {
-// 		panic(err)
-// 	}
-// 	return *t
-// }
-
-func (s *ServerHandler) BasicValidateRequest(r *http.Request) error {
-	accept := r.Header.Get("Accept")
-	if accept != "application/json" {
-		return errors.New("Accept")
-	}
-	apiKey := r.Header.Get("x-api-key")
-	authorization := r.Header.Get("Authorization")
-	if apiKey == "" && authorization == "" {
-		return errors.New("Auth")
-	}
-	return nil
+func NewServerHandler(db *db.Db) ServerHandler {
+	return ServerHandler{db: db, user: endpoints.UserHandler{Db: db}, table: endpoints.TableHandler{Db: db}, check: endpoints.CheckHandler{Db: db}}
 }
 
 func (s *ServerHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	basicErr := s.BasicValidateRequest(r)
+	basicErr := endpoints.BasicValidateRequest(w, r)
 	if basicErr != nil {
-		switch basicErr.Error() {
-		case "Auth":
-			http.Error(w, "Missing authorization header and api key", http.StatusUnauthorized)
-		case "Accept":
-			http.Error(w, "Invalid Accept Header", http.StatusBadRequest)
-		}
 		return
 	}
-	w.Write([]byte("Hello World"))
+	uri := r.URL.Path
+	accept := r.Header.Get("Accept")
+	switch uri {
+	case "/":
+		w.Write([]byte("Hello World"))
+	case "/user":
+		switch accept {
+		case "application/json":
+			s.user.ServeJson(w, r)
+			return
+		default:
+			w.WriteHeader(http.StatusNotAcceptable)
+			return
+		}
+	case "/table":
+		switch accept {
+		case "application/json":
+			s.table.ServeJson(w, r)
+			return
+		default:
+			w.WriteHeader(http.StatusNotAcceptable)
+			return
+		}
+	case "/check":
+		switch accept {
+		case "application/json":
+			s.check.ServeJson(w, r)
+			return
+		default:
+			w.WriteHeader(http.StatusNotAcceptable)
+			return
+		}
+	}
 }
 
 func main() {
 	db := db.NewDb()
 	defer db.Close()
 	mux := http.NewServeMux()
-	handler := ServerHandler{db}
+	handler := NewServerHandler(&db)
 	mux.Handle("/", &handler)
-	http.ListenAndServe(":8080", mux)
+	err := http.ListenAndServe(":8080", mux)
+	if err != nil {
+		panic(err)
+	}
 }

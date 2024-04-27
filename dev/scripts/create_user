@@ -1,0 +1,26 @@
+#!/bin/zsh
+
+# Parse command-line flags
+while getopts f:l:e:p: flag
+do
+    case "${flag}" in
+        f) first_name="${OPTARG}";;
+        l) last_name="${OPTARG}";;
+        e) email="${OPTARG}";;
+        p) password="${OPTARG}";;
+        *) echo "Invalid flag"; exit 1;;
+    esac
+done
+
+# Ensure all required flags are provided
+if [ -z "${first_name}" ] || [ -z "${email}" ] || [ -z "${password}" ]; then
+    echo "Missing required flags: first_name, email, or password"
+    exit 1
+fi
+
+# Send data using curl with interpolated variables
+curl -X POST \
+     -H "Content-Type: application/json" \
+     -H "Accept: application/json" \
+     -d '{"first_name": "'"${first_name}"'", "last_name": "'"${last_name}"'", "email": "'"${email}"'", "password": "'"${password}"'"}' \
+     localhost:8080/user

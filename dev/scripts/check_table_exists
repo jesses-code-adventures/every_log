@@ -1,0 +1,10 @@
+#!/bin/zsh
+
+TABLE_NAME=$1
+
+if [ -z "$TABLE_NAME" ]; then
+    echo "Usage: $0 <table_name>"
+    exit 1
+fi
+
+curl -G -k localhost:8080/check -H "Accept:application/json" -H "x-api-key:6969" -d "table=$TABLE_NAME"

@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
-	"time"
+	"encoding/json"
 
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
@@ -46,13 +46,89 @@ func (db Db) Close() {
 	db.Db.Close()
 }
 
-func (db Db) CreateUser(email string, first_name string, last_name *string, password string) (string, string, error) {
-	result := db.Db.QueryRow("INSERT INTO user (email, first_name, last_name, password) VALUES ($1, $2, $3, $4) RETURNING id, created_at", email, first_name, last_name, password)
-	var id string;
-	var created_at time.Time;
-	err := result.Scan(&id, &created_at)
+func (db Db) CreateUser(email string, first_name string, last_name *string, password string) (string, error) {
+	tx, err := db.Db.Begin()
 	if err != nil {
-		return "", "", err
+		fmt.Println(err)
+		return "", err
 	}
-	return id, nil
+	var user_id string
+	err = tx.QueryRow("INSERT INTO single_user DEFAULT VALUES RETURNING id").Scan(&user_id)
+	if err != nil {
+		fmt.Println(err)
+		tx.Rollback()
+		return "", err
+	}
+	var pii_id string;
+	err = tx.QueryRow("INSERT INTO user_pii (user_id, email, first_name, last_name, password) VALUES ($1, $2, $3, $4, $5) RETURNING id", user_id, email, first_name, last_name, password).Scan(&pii_id)
+	if err != nil {
+		if err.Error() == "pq: duplicate key value violates unique constraint \"user_pii_email_key\"" {
+			tx.Rollback()
+			return "", fmt.Errorf("Email already exists")
+		}
+		fmt.Println(err)
+		tx.Rollback()
+		return "", err
+	}
+	err = tx.QueryRow("UPDATE single_user SET pii_id = $1 WHERE id = $2 RETURNING id", pii_id, user_id).Scan(&user_id)
+	if err != nil {
+		fmt.Println(err)
+		tx.Rollback()
+		return "", err
+	}
+	err = tx.Commit()
+	if err != nil {
+		fmt.Println(err)
+		return "", err
+	}
+	return user_id, nil
+}
+
+func (db Db) CheckTableExists(name string) ([]byte, error) {
+	query := fmt.Sprintf("SELECT table_name FROM information_schema.tables WHERE table_name = '%s';", name)
+	var table_name string
+	err := db.Db.QueryRow(query).Scan(&table_name)
+	if err != nil {
+		return []byte{}, err
+	}
+	resp := struct {
+		Exists bool `json:"exists"`
+	} {
+		Exists: table_name == name,
+	}
+	return json.Marshal(resp)
+}
+
+func (db Db) ShowTables() ([]byte, error) {
+	query := `SELECT c.relname as "Name"
+FROM pg_catalog.pg_class c
+    LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+WHERE c.relkind IN ('r','')
+    AND n.nspname <> 'pg_catalog'
+    AND n.nspname <> 'information_schema'
+    AND n.nspname !~ '^pg_toast'
+AND pg_catalog.pg_table_is_visible(c.oid)
+ORDER BY 1;`
+	rows, err := db.Db.Query(query)
+	resp := []byte{}
+	names := []string{}
+	if err != nil {
+		fmt.Println(err)
+		return resp, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var table_name string
+		err := rows.Scan(&table_name)
+		if err != nil {
+			fmt.Println(err)
+		}
+		names = append(names, table_name)
+	}
+	resp, err = json.Marshal(names)
+	if err != nil {
+		fmt.Println(err)
+		return resp, err
+	}
+	return resp, nil
 }

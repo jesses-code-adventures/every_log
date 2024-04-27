@@ -1,3 +1,6 @@
+CREATE DATABASE everylog;
+\c everylog;
+
 -- Create table for locations first as it's referenced in other tables
 CREATE TABLE IF NOT EXISTS location (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
@@ -11,13 +14,13 @@ CREATE TABLE IF NOT EXISTS location (
     CONSTRAINT location_unique UNIQUE (address1, address2, city, state, country)
 );
 
--- Create table for "user"s
-CREATE TABLE IF NOT EXISTS "user" (
+-- Create table for single_users
+CREATE TABLE IF NOT EXISTS single_user (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
     pii_id UUID,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    password VARCHAR(255) -- todo: hash this or use a better method
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
+
 
 -- Create table for organizations
 CREATE TABLE IF NOT EXISTS org (
@@ -28,19 +31,19 @@ CREATE TABLE IF NOT EXISTS org (
     FOREIGN KEY (location_id) REFERENCES location(id)
 );
 
--- Create table for "user"-organization relationships (many-to-many)
+-- Create table for single_user-organization relationships (many-to-many)
 CREATE TABLE IF NOT EXISTS user_org (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
     user_id UUID,
     org_id UUID,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     level VARCHAR(10),
-    FOREIGN KEY (user_id) REFERENCES "user"(id),
+    FOREIGN KEY (user_id) REFERENCES single_user(id),
     FOREIGN KEY (org_id) REFERENCES org(id),
     CONSTRAINT user_org_unique UNIQUE (user_id, org_id)
 );
 
--- Create table for "user" PII
+-- Create table for single_user PII
 CREATE TABLE IF NOT EXISTS user_pii (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
     user_id UUID,
@@ -49,7 +52,8 @@ CREATE TABLE IF NOT EXISTS user_pii (
     last_name VARCHAR(255),
     location_id UUID,
     mobile_number VARCHAR(20),
-    FOREIGN KEY (user_id) REFERENCES "user"(id),
+    password VARCHAR(255), -- todo: hash this or use a better method
+    FOREIGN KEY (user_id) REFERENCES single_user(id),
     FOREIGN KEY (location_id) REFERENCES location(id)
 );
 
@@ -60,7 +64,7 @@ CREATE TABLE IF NOT EXISTS project (
     name VARCHAR(255),
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     description TEXT,
-    FOREIGN KEY (user_id) REFERENCES "user"(id)
+    FOREIGN KEY (user_id) REFERENCES single_user(id)
 );
 
 -- Create table for authorization tokens
@@ -84,7 +88,7 @@ CREATE TABLE IF NOT EXISTS permitted_project (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
     user_id UUID,
     project_org_id UUID,
-    FOREIGN KEY (user_id) REFERENCES "user"(id),
+    FOREIGN KEY (user_id) REFERENCES single_user(id),
     FOREIGN KEY (project_org_id) REFERENCES project_org(id)
 );
 
@@ -96,8 +100,8 @@ CREATE TABLE IF NOT EXISTS invite (
     status VARCHAR(10),
     project_id UUID,
     org_id UUID,
-    FOREIGN KEY (from_user_id) REFERENCES "user"(id),
-    FOREIGN KEY (to_user_id) REFERENCES "user"(id),
+    FOREIGN KEY (from_user_id) REFERENCES single_user(id),
+    FOREIGN KEY (to_user_id) REFERENCES single_user(id),
     FOREIGN KEY (project_id) REFERENCES project(id),
     FOREIGN KEY (org_id) REFERENCES org(id),
     CONSTRAINT invite_constraint CHECK (project_id IS NOT NULL OR org_id IS NOT NULL)
