@@ -1,0 +1,7 @@
+#!/bin/zsh
+
+dev/scripts/create_test_user
+dev/scripts/authenticate_test_user
+dev/scripts/authorize
+dev/scripts/create_test_project
+dev/scripts/create_test_api_key

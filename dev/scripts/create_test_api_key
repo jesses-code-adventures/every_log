@@ -1,0 +1,13 @@
+#!/bin/zsh
+
+token=$(dev/scripts/get_token)
+user_id=$(cat dev/scripts/user_id)
+project_id=$(cat dev/scripts/project_id)
+resp=$(dev/scripts/create_api_key -t $token -u $user_id -p $project_id)
+key=$(echo $resp | jq '.key' | tr -d '"')
+if [ -z "$key" ]; then
+    echo "Failed to create API key"
+    exit 1
+fi
+echo $key > dev/scripts/api_key
+echo "API key saved to dev/scripts/api_key"

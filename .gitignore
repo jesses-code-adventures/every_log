@@ -3,3 +3,4 @@ tmp/
 .pgpass
 dev/scripts/user_id
 dev/scripts/project_id
+dev/scripts/api_key

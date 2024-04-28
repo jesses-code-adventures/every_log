@@ -5,3 +5,4 @@ dev/scripts/create_database
 dev/scripts/create_tables
 dev/scripts/create_dev_db_user
 dev/scripts/grant_dev_perms
+dev/scripts/create_log_levels

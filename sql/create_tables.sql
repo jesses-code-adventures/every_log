@@ -69,13 +69,13 @@ CREATE TABLE IF NOT EXISTS project (
     CONSTRAINT project_unique UNIQUE (name, user_id)
 );
 
--- Create table for authorization tokens
-CREATE TABLE IF NOT EXISTS authorization_token (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    api_key_id UUID UNIQUE,
-    token TEXT
-);
+-- -- Create table for authorization tokens
+-- CREATE TABLE IF NOT EXISTS authorization_token (
+--     id UUID PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+--     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+--     api_key_id UUID UNIQUE,
+--     token TEXT
+-- );
 
 -- Create table for project-organization relationships (many-to-many)
 CREATE TABLE IF NOT EXISTS project_org (
@@ -117,8 +117,8 @@ CREATE TABLE IF NOT EXISTS invite (
 -- Create table for API keys
 CREATE TABLE IF NOT EXISTS api_key (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-    permitted_project_id UUID,
-    key TEXT,
+    permitted_project_id UUID UNIQUE NOT NULL,
+    key TEXT NOT NULL,
     FOREIGN KEY (permitted_project_id) REFERENCES permitted_project(id)
 );
 
@@ -134,7 +134,7 @@ CREATE TABLE IF NOT EXISTS process (
 
 -- Create table for log levels
 CREATE TABLE IF NOT EXISTS log_level (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+    id INT PRIMARY KEY NOT NULL,
     value VARCHAR(255)
 );
 
@@ -143,11 +143,13 @@ CREATE TABLE IF NOT EXISTS log_level (
 CREATE TABLE IF NOT EXISTS log (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    project_id UUID,
-    level_id UUID,
+    user_id UUID NOT NULL,
+    project_id UUID NOT NULL,
+    level_id INT NOT NULL,
     process_id UUID,
     message TEXT,
     traceback TEXT,
+    FOREIGN KEY (user_id) REFERENCES single_user(id),
     FOREIGN KEY (project_id) REFERENCES project(id),
     FOREIGN KEY (level_id) REFERENCES log_level(id),
     FOREIGN KEY (process_id) REFERENCES process(id)

@@ -1,0 +1,27 @@
+#!/bin/zsh
+
+# Parse command-line flags
+while getopts p:u:t: flag
+do
+    case "${flag}" in
+        p) project_id="${OPTARG}";;
+        u) user_id="${OPTARG}";;
+        t) token="${OPTARG}";;
+        *) echo "Invalid flag"; exit 1;;
+    esac
+done
+
+# Ensure all required flags are provided
+if [ -z "${project_id}" ] || [ -z "${user_id}" ] || [ -z "${token}" ] ; then
+    echo "Missing required flags: user_id, token, or project_id"
+    exit 1
+fi
+
+# Send data using curl with interpolated variables
+curl -X POST \
+     -H "Content-Type: application/json" \
+     -H "Accept: application/json" \
+     -H "user_id: ${user_id}" \
+     -b "token=${token}" \
+     --no-progress-meter \
+     localhost:8080/project/${project_id}/key

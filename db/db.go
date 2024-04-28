@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"crypto/rand"
+	"encoding/hex"
 
 	"github.com/jesses-code-adventures/every_log/error_msgs"
 	"github.com/joho/godotenv"
@@ -158,4 +160,131 @@ func (db Db) CreateProject(user_id string, name string, description *string) (st
 		return "", errors.New(error_msgs.DATABASE_ERROR)
 	}
 	return project_id, nil
+}
+
+func (db Db) CreateLog(userId string, project_id string, level_id int, process_id *string, message string, traceback *string, apiKey string) (string, error) {
+	var logId string
+	tx, err := db.Db.Begin()
+	if err != nil {
+		fmt.Println(err) // TODO: Use a logger
+		return "", errors.New(error_msgs.DATABASE_ERROR)
+	}
+	_, err = db.getPermittedProjectIdFromApiKey(userId, apiKey)
+	if err != nil {
+		innerErr := tx.Rollback()
+		if innerErr != nil {
+			fmt.Println(innerErr) // TODO: Use a logger
+			return "", errors.New(error_msgs.DATABASE_ERROR)
+		}
+		return "", err
+	}
+	row := tx.QueryRow("INSERT INTO log (user_id, project_id, level_id, process_id, message, traceback) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id", userId, project_id, level_id, process_id, message, traceback)
+	err = row.Scan(&logId)
+	if err != nil {
+		fmt.Println(err) // TODO: Use a logger
+		innerErr := tx.Rollback()
+		if innerErr != nil {
+			fmt.Println(innerErr) // TODO: Use a logger
+			return "", errors.New(error_msgs.DATABASE_ERROR)
+		}
+		return "", errors.New(error_msgs.DATABASE_ERROR)
+	}
+	err = tx.Commit()
+	if err != nil {
+		fmt.Println(err) // TODO: Use a logger
+		return "", errors.New(error_msgs.DATABASE_ERROR)
+	}
+	return logId, nil
+}
+
+func (db Db) getPermittedProjectId(userId string, projectId string, tx *sql.Tx) (string, error) {
+	var id string
+	var err error
+	if tx != nil {
+		err = tx.QueryRow("SELECT id FROM permitted_project WHERE user_id = $1 AND project_id = $2", userId, projectId).Scan(&id)
+	} else {
+		err = db.Db.QueryRow("SELECT id FROM permitted_project WHERE user_id = $1 AND project_id = $2", userId, projectId).Scan(&id)
+	}
+	if err != nil {
+		fmt.Println(err) // TODO: Use a logger
+		return "", errors.New(error_msgs.DATABASE_ERROR)
+	}
+	return id, nil
+}
+
+func (db Db) getPermittedProjectIdFromApiKey(userId string, apiKey string) (string, error) {
+	var id string
+	var matchingUserId string
+	err := db.Db.QueryRow(`SELECT api_key.permitted_project_id, permitted_project.user_id
+FROM api_key
+LEFT JOIN permitted_project
+ON permitted_project.id = api_key.permitted_project_id
+WHERE api_key.key = $1;`, apiKey).Scan(&id, &matchingUserId)
+	if err != nil {
+		fmt.Println(err) // TODO: Use a logger
+		return "", errors.New(error_msgs.DATABASE_ERROR)
+	}
+	if matchingUserId != userId {
+		fmt.Println("User ID does not match") // TODO: Use a logger
+		return "", errors.New(error_msgs.UNAUTHORIZED)
+	}
+	return id, nil
+}
+
+// GenerateRandomAPIKey generates a random alphanumeric API key of the given length
+func GenerateRandomAPIKey(length int) (string, error) {
+	// Create a byte slice to hold the random bytes
+	bytes := make([]byte, length/2) // Using hex encoding, so each byte gives two characters
+
+	// Fill the byte slice with random data
+	if _, err := rand.Read(bytes); err != nil {
+		return "", err
+	}
+
+	// Return the hex-encoded string
+	return hex.EncodeToString(bytes), nil
+}
+
+func (db Db) CreateApiKey(userId string, projectId string) (string, error) {
+	tx, err := db.Db.Begin()
+	if err != nil {
+		fmt.Println(err) // TODO: Use a logger
+		return "", errors.New(error_msgs.DATABASE_ERROR)
+	}
+	permittedId, err := db.getPermittedProjectId(userId, projectId, tx)
+	if err != nil {
+		innerErr := tx.Rollback()
+		if innerErr != nil {
+			fmt.Println(innerErr) // TODO: Use a logger
+			return "", errors.New(error_msgs.DATABASE_ERROR)
+		}
+		return "", errors.New(error_msgs.UNAUTHORIZED)
+	}
+	apiKey, err := GenerateRandomAPIKey(32)
+	if err != nil {
+		innerErr := tx.Rollback()
+		if innerErr != nil {
+			fmt.Println(innerErr) // TODO: Use a logger
+			return "", errors.New(error_msgs.DATABASE_ERROR)
+		}
+		return "", errors.New(error_msgs.DATABASE_ERROR)
+	}
+
+	_, err = tx.Exec("INSERT INTO api_key (permitted_project_id, key) VALUES ($1, $2) ON CONFLICT(permitted_project_id) DO UPDATE SET key=EXCLUDED.key", permittedId, apiKey)
+
+	if err != nil {
+		innerErr := tx.Rollback()
+		if innerErr != nil {
+			fmt.Println(innerErr) // TODO: Use a logger
+			return "", errors.New(error_msgs.DATABASE_ERROR)
+		}
+		return "", errors.New(error_msgs.DATABASE_ERROR)
+	}
+	err = tx.Commit()
+	if err != nil {
+		fmt.Println(err) // TODO: Use a logger
+		return "", errors.New(error_msgs.DATABASE_ERROR)
+	}
+	return apiKey, nil
+
 }

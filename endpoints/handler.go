@@ -15,6 +15,7 @@ type ServerHandler struct {
 	authorize    AuthorizationMiddleware
 	project      ProjectHandler
 	dbUser       DbUserHandler
+	log          LogHandler
 }
 
 func NewServerHandler(db *db.Db) ServerHandler {
@@ -27,6 +28,7 @@ func NewServerHandler(db *db.Db) ServerHandler {
 		authorize:    AuthorizationHandler{Db: db},
 		project:      ProjectHandler{Db: db},
 		dbUser:       DbUserHandler{Db: db},
+		log:          LogHandler{Db: db},
 	}
 	return handler
 }
@@ -58,13 +60,15 @@ You can create a user by sending a POST request to /user, get a list of tables b
 		s.table.ServeHTTP(w, r)
 	case "/check":
 		s.check.ServeHTTP(w, r)
+	case "/dev_db_user":
+		s.dbUser.ServeHTTP(w, r)
 	case "/authenticate":
 		s.authenticate.ServeHTTP(w, r)
 	case "/authorize":
 		s.authorize.ServeHTTP(w, r)
 	case "/project":
 		s.HandleAuthMiddleware(w, r, s.project.ServeHTTP)
-	case "/dev_db_user":
-		s.dbUser.ServeHTTP(w, r)
+	case "/log":
+		s.HandleAuthMiddleware(w, r, s.log.ServeHTTP)
 	}
 }

@@ -12,6 +12,7 @@ func main() {
 	defer db.Close()
 	mux := http.NewServeMux()
 	handler := endpoints.NewServerHandler(&db)
+	mux.Handle("/project/{project_id}/key", endpoints.ApiKeyHandler{Db: &db})
 	mux.Handle("/", &handler)
 	err := http.ListenAndServe(":8080", mux)
 	if err != nil {

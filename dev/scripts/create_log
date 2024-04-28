@@ -1,0 +1,47 @@
+#!/bin/zsh
+
+# Parse command-line flags
+while getopts l:p:m:e:i:t:u:a: flag
+do
+    case "${flag}" in
+        l) level_id="${OPTARG}";;
+        p) project_id="${OPTARG}";;
+        a) api_key="${OPTARG}";;
+        m) message="${OPTARG}";;
+        e) traceback="${OPTARG}";;
+        i) process_id="${OPTARG}";;
+        u) user_id="${OPTARG}";;
+        t) token="${OPTARG}";;
+        *) echo "Invalid flag"; exit 1;;
+    esac
+done
+
+# Ensure all required flags are provided
+if [ -z "${level_id}" ] || [ -z "${project_id}" ] || [ -z "${message}" ] || [ -z "${token}" ] || [ -z "${user_id}" ] || [ -z "${api_key}" ]; then
+    echo "Missing required flags: user_id, token, level_id, project_id, or message"
+    exit 1
+fi
+
+if [ "${process_id}" ]; then
+    process_id=", \"process_id\": \"${process_id}\""
+else
+    process_id=""
+fi
+
+if [ "${traceback}" ]; then
+    traceback=", \"traceback\": \"${traceback}\""
+else
+    traceback=""
+fi
+
+
+# Send data using curl with interpolated variables
+curl -X POST \
+     -H "Content-Type: application/json" \
+     -H "Accept: application/json" \
+     -H "user_id: ${user_id}" \
+     -H "api_key: ${api_key}" \
+     -b "token=${token}" \
+     -d "{\"level_id\": ${level_id}, \"project_id\": \"${project_id}\"${process_id}${traceback}}" \
+     --no-progress-meter \
+     localhost:8080/log
