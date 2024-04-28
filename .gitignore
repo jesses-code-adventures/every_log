@@ -1,3 +1,5 @@
 .env
 tmp/
 .pgpass
+dev/scripts/user_id
+dev/scripts/project_id

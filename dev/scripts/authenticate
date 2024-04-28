@@ -12,8 +12,16 @@ do
 done
 
 # Ensure all required flags are provided
-if [ -z "${email}" ] || [ -z "${user_id}" ] || [ -z "${password}" ]; then
-    echo "Missing required flags: email, user_id, or password"
+if [ -z "${email}" ]; then
+    echo "Missing email"
+    exit 1
+fi
+if [ -z "${password}" ]; then
+    echo "missing password"
+    exit 1
+fi
+if [ -z "${user_id}" ]; then
+    echo "Missing user id"
     exit 1
 fi
 
@@ -23,6 +31,7 @@ response=$(curl -X POST \
      -H "Accept: application/json" \
      -H "user_id: ${user_id}" \
      -d '{"email": "'"${email}"'", "password": "'"${password}"'"}' \
+     --no-progress-meter \
      localhost:8080/authenticate)
 
 # Extract the token from the JSON response

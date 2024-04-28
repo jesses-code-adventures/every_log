@@ -12,4 +12,5 @@ curl -X POST \
     -H "Authorization: Bearer ${token}" \
     -b "token=${token}" \
     -d '{"token": "'"${token}"'"}' \
+    --no-progress-meter \
     localhost:8080/authorize

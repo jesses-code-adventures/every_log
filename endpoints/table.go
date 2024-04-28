@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/jesses-code-adventures/every_log/db"
+	"github.com/jesses-code-adventures/every_log/error_msgs"
 )
 
 type TableHandler struct {
@@ -27,12 +28,13 @@ func (t TableHandler) ServeJson(w http.ResponseWriter, r *http.Request) {
 	case http.MethodGet:
 		resp, err := t.Db.ShowTables()
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			status := error_msgs.GetErrorHttpStatus(err)
+			http.Error(w, error_msgs.JsonifyError(err.Error()), status)
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.Write(resp)
 	default:
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		http.Error(w, error_msgs.UNACCEPTABLE_HTTP_METHOD, http.StatusMethodNotAllowed)
 	}
 }

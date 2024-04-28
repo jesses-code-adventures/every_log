@@ -1,3 +1,9 @@
 #!/bin/zsh
 
-dev/scripts/create_user -f jesse -l williams -e test@email.com -p hello | jq -r ".id" > dev/scripts/user_id
+resp=$(dev/scripts/create_user -f jesse -l williams -e "test@email.com" -p hello)
+user_id=$(jq -r ".id")
+if [ -z "$user_id" ]; then
+    echo resp
+    exit 1
+fi
+echo user_id > dev/scripts/user_id

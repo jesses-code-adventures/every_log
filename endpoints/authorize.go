@@ -12,6 +12,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/jesses-code-adventures/every_log/db"
+	"github.com/jesses-code-adventures/every_log/error_msgs"
 	"github.com/joho/godotenv"
 )
 
@@ -28,7 +29,7 @@ type AuthorizationHandler struct {
 func NewAuthorizationHandler(db *db.Db) AuthorizationHandler {
 	err := godotenv.Load()
 	if err != nil {
-		fmt.Println("Error loading .env file")
+		panic("Error loading .env file")
 	}
 	jwt_signing_key := os.Getenv("JWT_SIGNING_KEY")
 	if jwt_signing_key == "" {
@@ -54,24 +55,14 @@ func (a AuthorizationHandler) ServeJson(w http.ResponseWriter, r *http.Request) 
 	case http.MethodPost:
 		err := a.Authorize(w, r)
 		if err != nil {
-			if err.Error() == "Db error" || err.Error() == "failed to convert to JSON" {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			} else if err.Error() == "Unauthorized" {
-				http.Error(w, err.Error(), http.StatusUnauthorized)
-				return
-			} else if err.Error() == "token expired" {
-				http.Error(w, err.Error(), http.StatusUnauthorized)
-				return
-			} else {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
+			status := error_msgs.GetErrorHttpStatus(err)
+			http.Error(w, error_msgs.JsonifyError(err.Error()), status)
+			return
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.Write([]byte(`{"message": "Authorized"}`))
 	default:
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		http.Error(w, error_msgs.JsonifyError(error_msgs.UNACCEPTABLE_HTTP_METHOD), http.StatusMethodNotAllowed)
 	}
 }
 
@@ -80,38 +71,39 @@ func (a AuthorizationHandler) ServeJson(w http.ResponseWriter, r *http.Request) 
 func (a AuthorizationHandler) Authorize(w http.ResponseWriter, r *http.Request) error {
 	post, err := newIncomingPostDataAuthorize(r)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		status := error_msgs.GetErrorHttpStatus(err)
+		http.Error(w, error_msgs.JsonifyError(err.Error()), status)
 		return err
 	}
 	tx, err := a.Db.Db.Begin()
 	if err != nil {
-		return err
+		fmt.Println(err) // TODO: use a logger
+		newErr := errors.New(error_msgs.DATABASE_ERROR)
+		status := error_msgs.GetErrorHttpStatus(newErr)
+		http.Error(w, error_msgs.JsonifyError(newErr.Error()), status)
+		return newErr
 	}
-	err = a.checkAuthorized(post)
+	err = a.Db.Authorize(post.UserId, post.Token, tx)
 	if err != nil {
 		tx.Rollback()
+		status := error_msgs.GetErrorHttpStatus(err)
+		http.Error(w, error_msgs.JsonifyError(err.Error()), status)
 		return err
 	}
 	claims, err := a.decodeJWT(post.Token)
 	if err != nil {
 		tx.Rollback()
+		status := error_msgs.GetErrorHttpStatus(err)
+		http.Error(w, error_msgs.JsonifyError(err.Error()), status)
 		return err
 	}
 	if claims.ExpiresAt.Time.Before(time.Now()) {
-		// Roll back the transaction
 		tx.Rollback()
-		return errors.New("token expired")
-	}
-	return nil
-}
-
-func (a AuthorizationHandler) checkAuthorized(r incomingAuthorizationData) error {
-	isAuthorized, err := a.Db.Authorize(r.UserId, r.Token)
-	if err != nil {
-		return errors.New("Db error")
-	}
-	if !isAuthorized {
-		return errors.New("Unauthorized")
+		fmt.Println(error_msgs.EXPIRED_TOKEN) // TODO: use a logger
+		err = errors.New(error_msgs.EXPIRED_TOKEN)
+		status := error_msgs.GetErrorHttpStatus(err)
+		http.Error(w, error_msgs.JsonifyError(err.Error()), status)
+		return err
 	}
 	return nil
 }
@@ -129,14 +121,16 @@ func (a *AuthorizationHandler) decodeJWT(tokenString string) (*Claims, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
 		// Verify that the signing method is correct
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+			fmt.Println(fmt.Errorf("unexpected signing method: %v", token.Header["alg"])) // TODO: Use a logger
+			return nil, errors.New(error_msgs.AUTHENTICATION_PROCESS_ERROR)
 		}
 		// Return the secret key for verification
 		return []byte(a.signing_key), nil
 	})
 
 	if err != nil {
-		return nil, err
+		fmt.Println(err) // TODO: Use a logger
+		return nil, errors.New(error_msgs.AUTHORIZATION_PROCESS_ERROR)
 	}
 
 	// Check if the token is valid
@@ -144,7 +138,7 @@ func (a *AuthorizationHandler) decodeJWT(tokenString string) (*Claims, error) {
 		return claims, nil
 	}
 
-	return nil, fmt.Errorf("invalid token")
+	return nil, errors.New(error_msgs.INVALID_TOKEN)
 }
 
 type incomingAuthorizationData struct {
@@ -152,12 +146,7 @@ type incomingAuthorizationData struct {
 	Token  string `json:"token"`
 }
 
-// takes the token from cookies if it exists, else looks in the body for "token"
-func newIncomingPostDataAuthorize(r *http.Request) (incomingAuthorizationData, error) {
-	user_id := r.Header.Get("user_id")
-	if user_id == "" {
-		return incomingAuthorizationData{}, errors.New("user_id is required")
-	}
+func getTokenFromCookies(r *http.Request, user_id string) *incomingAuthorizationData {
 	cookies := r.Cookies()
 	var token string
 	for _, cookie := range cookies {
@@ -167,17 +156,31 @@ func newIncomingPostDataAuthorize(r *http.Request) (incomingAuthorizationData, e
 	}
 	token = strings.TrimPrefix(token, "Bearer: ")
 	if token != "" {
-		return incomingAuthorizationData{UserId: user_id, Token: token}, nil
+		return &incomingAuthorizationData{UserId: user_id, Token: token}
+	}
+	return nil
+}
+
+// takes the token from cookies if it exists, else looks in the body for "token"
+func newIncomingPostDataAuthorize(r *http.Request) (incomingAuthorizationData, error) {
+	user_id := r.Header.Get("user_id")
+	if user_id == "" {
+		fmt.Println(error_msgs.USER_ID_REQUIRED) // TODO: use a logger
+		return incomingAuthorizationData{}, errors.New(error_msgs.USER_ID_REQUIRED)
+	}
+	cookieToken := getTokenFromCookies(r, user_id)
+	if cookieToken != nil {
+		return *cookieToken, nil
 	}
 	body := r.Body
 	defer body.Close()
-	// Extract fields from JSON body
 	var decodedBody struct {
 		Token string `json:"token"`
 	}
 	err := json.NewDecoder(body).Decode(&decodedBody)
 	if err != nil {
-		return incomingAuthorizationData{}, err
+		fmt.Println(err) // TODO: Use a logger
+		return incomingAuthorizationData{}, errors.New(error_msgs.JSON_PARSING_ERROR)
 	}
 	return incomingAuthorizationData{UserId: user_id, Token: strings.TrimPrefix(decodedBody.Token, "Bearer: ")}, nil
 }

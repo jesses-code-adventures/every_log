@@ -2,7 +2,10 @@ package db
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+
+	"github.com/jesses-code-adventures/every_log/error_msgs"
 )
 
 func (db Db) CheckTableExists(name string) ([]byte, error) {
@@ -10,14 +13,20 @@ func (db Db) CheckTableExists(name string) ([]byte, error) {
 	var table_name string
 	err := db.Db.QueryRow(query).Scan(&table_name)
 	if err != nil {
-		return []byte{}, err
+		fmt.Println(err) // TODO: Use a logger
+		return []byte{}, errors.New(error_msgs.DATABASE_ERROR)
 	}
 	resp := struct {
 		Exists bool `json:"exists"`
 	}{
 		Exists: table_name == name,
 	}
-	return json.Marshal(resp)
+	parsed, err := json.Marshal(resp)
+	if err != nil {
+		fmt.Println(err) // TODO: Use a logger
+		return parsed, errors.New(error_msgs.JSON_PARSING_ERROR)
+	}
+	return parsed, nil
 }
 
 func (db Db) ShowTables() ([]byte, error) {
@@ -31,11 +40,10 @@ WHERE c.relkind IN ('r','')
 AND pg_catalog.pg_table_is_visible(c.oid)
 ORDER BY 1;`
 	rows, err := db.Db.Query(query)
-	resp := []byte{}
 	names := []string{}
 	if err != nil {
-		fmt.Println(err)
-		return resp, err
+		fmt.Println(err) // TODO: Use a logger
+		return []byte{}, errors.New(error_msgs.DATABASE_ERROR)
 	}
 	defer rows.Close()
 	for rows.Next() {
@@ -46,10 +54,10 @@ ORDER BY 1;`
 		}
 		names = append(names, table_name)
 	}
-	resp, err = json.Marshal(names)
+	resp, err := json.Marshal(names)
 	if err != nil {
-		fmt.Println(err)
-		return resp, err
+		fmt.Println(err) // TODO: Use a logger
+		return resp, errors.New(error_msgs.JSON_PARSING_ERROR)
 	}
 	return resp, nil
 }
@@ -59,13 +67,18 @@ func (db Db) GetCurrentUser() ([]byte, error) {
 	var user string
 	err := db.Db.QueryRow(query).Scan(&user)
 	if err != nil {
-		fmt.Println(err)
-		return []byte{}, err
+		fmt.Println(err) // TODO: Use a logger
+		return []byte{}, errors.New(error_msgs.DATABASE_ERROR)
 	}
 	resp := struct {
 		User string `json:"user"`
 	}{
 		User: user,
 	}
-	return json.Marshal(resp)
+	parsed, err := json.Marshal(resp)
+	if err != nil {
+		fmt.Println(err) // TODO: Use a logger
+		return parsed, errors.New(error_msgs.JSON_PARSING_ERROR)
+	}
+	return parsed, nil
 }

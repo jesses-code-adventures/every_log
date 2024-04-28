@@ -2,4 +2,4 @@
 
 user_id=$(cat dev/scripts/user_id)
 
-dev/scripts/authenticate -e test@email.com -p hello -u $user_id
+dev/scripts/authenticate -e "test@email.com" -p "hello" -u "${user_id}"

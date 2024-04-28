@@ -18,14 +18,12 @@ if [ -z "${name}" ] || [ -z "${token}" ] || [ -z "${user_id}" ]; then
     exit 1
 fi
 
-echo "Creating project with name: ${name}, description: ${description}, token: ${token}, user_id: ${user_id}"
-
 # Send data using curl with interpolated variables
-response=$(curl -X POST \
+curl -X POST \
      -H "Content-Type: application/json" \
      -H "Accept: application/json" \
      -H "user_id: ${user_id}" \
      -b "token=${token}" \
-     -d '{"name": "'"${name}"'", "description": "'"${description}"'"}' \
-     localhost:8080/project)
-echo $response
+     -d "{\"name\": \"${name}\", \"description\": \"${description}\"}" \
+     --no-progress-meter \
+     localhost:8080/project

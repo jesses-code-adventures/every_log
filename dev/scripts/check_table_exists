@@ -7,4 +7,4 @@ if [ -z "$TABLE_NAME" ]; then
     exit 1
 fi
 
-curl -G -k localhost:8080/check -H "Accept:application/json" -H "x-api-key:6969" -d "table=$TABLE_NAME"
+curl -G -k --no-progress-meter localhost:8080/check -H "Accept:application/json" -H "x-api-key:6969" -d "table=$TABLE_NAME"

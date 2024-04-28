@@ -1,9 +1,11 @@
 package endpoints
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/jesses-code-adventures/every_log/db"
+	"github.com/jesses-code-adventures/every_log/error_msgs"
 )
 
 type CheckHandler struct {
@@ -27,17 +29,20 @@ func (t CheckHandler) ServeJson(w http.ResponseWriter, r *http.Request) {
 	case http.MethodGet:
 		tableName := r.URL.Query().Get("table")
 		if tableName == "" {
-			http.Error(w, "Table name is required", http.StatusBadRequest)
+			msg := error_msgs.GetRequiredMessage("Table name")
+			status := error_msgs.GetErrorHttpStatus(errors.New(msg))
+			http.Error(w, error_msgs.JsonifyError(msg), status)
 			return
 		}
 		resp, err := t.Db.CheckTableExists(tableName)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			status := error_msgs.GetErrorHttpStatus(err)
+			http.Error(w, error_msgs.JsonifyError(err.Error()), status)
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.Write(resp)
 	default:
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		http.Error(w, error_msgs.JsonifyError(error_msgs.UNACCEPTABLE_HTTP_METHOD), http.StatusMethodNotAllowed)
 	}
 }

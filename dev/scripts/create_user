@@ -23,4 +23,5 @@ curl -X POST \
      -H "Content-Type: application/json" \
      -H "Accept: application/json" \
      -d '{"first_name": "'"${first_name}"'", "last_name": "'"${last_name}"'", "email": "'"${email}"'", "password": "'"${password}"'"}' \
+     --no-progress-meter \
      localhost:8080/user

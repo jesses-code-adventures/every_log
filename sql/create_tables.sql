@@ -62,10 +62,11 @@ CREATE TABLE IF NOT EXISTS user_pii (
 CREATE TABLE IF NOT EXISTS project (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
     user_id UUID,
-    name VARCHAR(255),
+    name VARCHAR(255) NOT NULL,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     description TEXT,
-    FOREIGN KEY (user_id) REFERENCES single_user(id)
+    FOREIGN KEY (user_id) REFERENCES single_user(id),
+    CONSTRAINT project_unique UNIQUE (name, user_id)
 );
 
 -- Create table for authorization tokens

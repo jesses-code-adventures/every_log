@@ -11,6 +11,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/jesses-code-adventures/every_log/db"
+	"github.com/jesses-code-adventures/every_log/error_msgs"
 	"github.com/joho/godotenv"
 )
 
@@ -22,7 +23,7 @@ type AuthenticationHandler struct {
 func NewAuthenticationHandler(db *db.Db) AuthenticationHandler {
 	err := godotenv.Load()
 	if err != nil {
-		fmt.Println("Error loading .env file")
+		panic("Error loading .env file")
 	}
 	jwt_signing_key := os.Getenv("JWT_SIGNING_KEY")
 	if jwt_signing_key == "" {
@@ -48,28 +49,22 @@ func (a AuthenticationHandler) ServeJson(w http.ResponseWriter, r *http.Request)
 	case http.MethodPost:
 		post, err := newIncomingAuthenticationData(r)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			status := error_msgs.GetErrorHttpStatus(err)
+			http.Error(w, error_msgs.JsonifyError(err.Error()), status)
 			return
 		}
 		resp, cookie, err := a.authenticate(post)
 		if err != nil {
-			if err.Error() == "Db error" || err.Error() == "failed to convert to JSON" {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			} else if err.Error() == "Unauthorized" {
-				http.Error(w, err.Error(), http.StatusUnauthorized)
-				return
-			} else {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
+			status := error_msgs.GetErrorHttpStatus(err)
+			http.Error(w, error_msgs.JsonifyError(err.Error()), status)
+			return
 		}
 		// TODO: test the cookies are being set properly
 		http.SetCookie(w, cookie)
 		w.Header().Set("Content-Type", "application/json")
 		w.Write(resp)
 	default:
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		http.Error(w, error_msgs.JsonifyError(error_msgs.UNACCEPTABLE_HTTP_METHOD), http.StatusMethodNotAllowed)
 	}
 }
 
@@ -79,18 +74,19 @@ func (a AuthenticationHandler) ServeJson(w http.ResponseWriter, r *http.Request)
 func (a AuthenticationHandler) authenticate(r incomingAuthenticationData) ([]byte, *http.Cookie, error) {
 	tx, err := a.Db.Db.Begin()
 	if err != nil {
-		return nil, nil, err
+		fmt.Println(err) // TODO: Use a logger
+		return nil, nil, errors.New(error_msgs.DATABASE_ERROR)
 	}
-	err = a.checkAuthenticated(r)
+	err = a.Db.Authenticate(r.UserId, r.Password, tx)
 	if err != nil {
 		tx.Rollback()
 		return nil, nil, err
 	}
 	token, expires, err := createJWT(r.UserId, r.Email, r.Password, a.signing_key)
-	updated := a.Db.UpdateUserToken(r.UserId, token, tx)
-	if !updated {
+	err = a.Db.UpdateUserToken(r.UserId, token, tx)
+	if err != nil {
 		tx.Rollback()
-		return []byte{}, nil, errors.New("Db error")
+		return []byte{}, nil, err
 	}
 	response := struct {
 		Token string `json:"token"`
@@ -100,25 +96,16 @@ func (a AuthenticationHandler) authenticate(r incomingAuthenticationData) ([]byt
 	jsonBytes, err := json.Marshal(response)
 	if err != nil {
 		tx.Rollback()
-		return nil, nil, errors.New("failed to convert response to json")
+		fmt.Println(err) // TODO: Use a logger
+		return nil, nil, errors.New(error_msgs.JSON_PARSING_ERROR)
 	}
 	err = tx.Commit()
 	if err != nil {
-		return nil, nil, err
+		fmt.Println(err) // TODO: Use a logger
+		return nil, nil, errors.New(error_msgs.DATABASE_ERROR)
 	}
 	cookie := getAuthCookie(token, expires)
 	return jsonBytes, cookie, nil
-}
-
-func (a AuthenticationHandler) checkAuthenticated(r incomingAuthenticationData) error {
-	isAuthenticated, err := a.Db.Authenticate(r.UserId, r.Password)
-	if err != nil {
-		return errors.New("Db error")
-	}
-	if !isAuthenticated {
-		return errors.New("Unauthorized")
-	}
-	return nil
 }
 
 func getAuthCookie(token string, expires time.Time) *http.Cookie {
@@ -153,7 +140,8 @@ func createJWT(userID string, email string, password string, secretKey string) (
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	signedToken, err := token.SignedString([]byte(secretKey))
 	if err != nil {
-		return "", time.Time{}, err
+		fmt.Println(err) // TODO: Use a logger
+		return "", time.Time{}, errors.New(error_msgs.AUTHENTICATION_PROCESS_ERROR)
 	}
 	return signedToken, expires, nil
 }
@@ -161,7 +149,8 @@ func createJWT(userID string, email string, password string, secretKey string) (
 func newIncomingAuthenticationData(r *http.Request) (incomingAuthenticationData, error) {
 	user_id := r.Header.Get("user_id")
 	if user_id == "" {
-		return incomingAuthenticationData{}, errors.New("user_id is required")
+		fmt.Println("user id not found") // TODO: Use a logger
+		return incomingAuthenticationData{}, errors.New(error_msgs.USER_ID_REQUIRED)
 	}
 	body := r.Body
 	defer body.Close()
@@ -172,7 +161,8 @@ func newIncomingAuthenticationData(r *http.Request) (incomingAuthenticationData,
 	}
 	err := json.NewDecoder(body).Decode(&decodedBody)
 	if err != nil {
-		return incomingAuthenticationData{}, err
+		fmt.Println(err) // TODO: Use a logger
+		return incomingAuthenticationData{}, errors.New(error_msgs.JSON_PARSING_ERROR)
 	}
 	return incomingAuthenticationData{UserId: user_id, Email: decodedBody.Email, Password: decodedBody.Password}, nil
 }

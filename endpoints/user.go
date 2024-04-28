@@ -3,9 +3,11 @@ package endpoints
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/jesses-code-adventures/every_log/db"
+	"github.com/jesses-code-adventures/every_log/error_msgs"
 )
 
 type UserHandler struct {
@@ -29,21 +31,14 @@ func (u UserHandler) ServeJson(w http.ResponseWriter, r *http.Request) {
 	case http.MethodPost:
 		id, err := u.createUser(r)
 		if err != nil {
-			if err.Error() == "Db error" || err.Error() == "failed to convert to JSON" {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			} else if err.Error() == "Email already exists" {
-				http.Error(w, err.Error(), http.StatusConflict)
-				return
-			} else {
-				http.Error(w, err.Error(), http.StatusUnprocessableEntity)
-				return
-			}
+			status := error_msgs.GetErrorHttpStatus(err)
+			http.Error(w, error_msgs.JsonifyError(err.Error()), status)
+			return
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.Write(id)
 	default:
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		http.Error(w, error_msgs.JsonifyError(error_msgs.UNACCEPTABLE_HTTP_METHOD), http.StatusMethodNotAllowed)
 	}
 }
 
@@ -61,14 +56,12 @@ func (u UserHandler) createUser(r *http.Request) ([]byte, error) {
 	}
 	err := json.NewDecoder(body).Decode(&request)
 	if err != nil {
-		return arr, err
+		fmt.Println(err) // TODO: Use a logger
+		return arr, errors.New(error_msgs.JSON_PARSING_ERROR)
 	}
 	id, err := u.Db.CreateUser(request.Email, request.FirstName, request.LastName, request.Password)
 	if err != nil {
-		if err.Error() == "Email already exists" {
-			return arr, errors.New("Email already exists")
-		}
-		return arr, errors.New("Db error")
+		return arr, err
 	}
 	response := struct {
 		ID string `json:"id"`
@@ -77,7 +70,8 @@ func (u UserHandler) createUser(r *http.Request) ([]byte, error) {
 	}
 	jsonBytes, err := json.Marshal(response)
 	if err != nil {
-		return nil, errors.New("failed to convert response to json")
+		fmt.Println(err) // TODO: Use a logger
+		return nil, errors.New(error_msgs.JSON_PARSING_ERROR)
 	}
 	return jsonBytes, nil
 }
