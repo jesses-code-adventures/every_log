@@ -69,14 +69,6 @@ CREATE TABLE IF NOT EXISTS project (
     CONSTRAINT project_unique UNIQUE (name, user_id)
 );
 
--- -- Create table for authorization tokens
--- CREATE TABLE IF NOT EXISTS authorization_token (
---     id UUID PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
---     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
---     api_key_id UUID UNIQUE,
---     token TEXT
--- );
-
 -- Create table for project-organization relationships (many-to-many)
 CREATE TABLE IF NOT EXISTS project_org (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
