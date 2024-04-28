@@ -1,9 +1,10 @@
 #!/bin/zsh
 
 resp=$(dev/scripts/create_user -f jesse -l williams -e "test@email.com" -p hello)
-user_id=$(jq -r ".id")
-if [ -z "$user_id" ]; then
-    echo resp
+user_id=$(echo $resp | jq -r ".id")
+if [ -z "$user_id" ] || [ "$user_id" = "null" ]; then
+    echo $resp
     exit 1
 fi
-echo user_id > dev/scripts/user_id
+echo "saving user id $user_id"
+echo $user_id > dev/scripts/user_id

@@ -48,5 +48,5 @@ func GetErrorHttpStatus(e error) int {
 }
 
 func JsonifyError(err string) string {
-	return `{"error": {"` + err + `"}`
+	return `{"error": "` + err + `"}`
 }

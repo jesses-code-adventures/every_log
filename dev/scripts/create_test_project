@@ -4,12 +4,10 @@
 token=$(dev/scripts/get_token)
 user_id=$(cat dev/scripts/user_id)
 response=$(dev/scripts/create_project -n "test project" -d "hi i am a description" -u $user_id -t $token)
-project_id=$(echo "$response" | jq -r '.id' 2>/dev/null)
-if [[ -z $project_id ]]; then
-  # If jq failed, print the raw response to identify the issue
+project_id=$(echo "$response" | jq -r '.id')
+if [ -z "$project_id" ] || [ "$project_id" = "null" ]; then
   echo "$response"
 else
-  # If jq succeeded, save the project_id to a file
   echo $project_id > dev/scripts/project_id
 fi
 

@@ -1,5 +1,8 @@
 #!/bin/zsh
 
 user_id=$(cat dev/scripts/user_id)
-
+if [ -z "${user_id}" ]; then
+    echo "No user_id found. Please run dev/scripts/create_user first."
+    exit 1
+fi
 dev/scripts/authenticate -e "test@email.com" -p "hello" -u "${user_id}"
