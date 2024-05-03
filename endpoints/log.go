@@ -32,7 +32,6 @@ func (p LogHandler) ServeJson(w http.ResponseWriter, r *http.Request) {
 	case http.MethodPost:
 		id, err := p.createLog(r)
 		if err != nil {
-			fmt.Printf(fmt.Sprintf("got error: %s", err))
 			status := error_msgs.GetErrorHttpStatus(err)
 			http.Error(w, error_msgs.JsonifyError(err.Error()), status)
 			return

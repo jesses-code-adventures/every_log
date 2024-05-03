@@ -129,6 +129,9 @@ func (a *AuthorizationHandler) decodeJWT(tokenString string) (*Claims, error) {
 	})
 	if err != nil {
 		fmt.Println(err) // TODO: Use a logger
+		if strings.Contains(err.Error(), "token is expired") {
+			return nil, errors.New(error_msgs.EXPIRED_TOKEN)
+		}
 		return nil, errors.New(error_msgs.AUTHORIZATION_PROCESS_ERROR)
 	}
 	// Check if the token is valid

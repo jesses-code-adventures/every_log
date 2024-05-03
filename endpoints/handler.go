@@ -2,6 +2,7 @@ package endpoints
 
 import (
 	"net/http"
+	"fmt"
 
 	"github.com/jesses-code-adventures/every_log/db"
 )
@@ -37,6 +38,7 @@ func (s *ServerHandler) HandleAuthMiddleware(w http.ResponseWriter, r *http.Requ
 	err := s.authorize.Authorize(w, r)
 	if err != nil {
 		//TODO: should http headers be set here?
+		fmt.Println("got error: ", err)
 		return
 	}
 	handler.ServeHTTP(w, r)

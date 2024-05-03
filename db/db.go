@@ -267,8 +267,6 @@ func (db Db) GetLogs(userId string, projectId *string, levelId *int, processId *
 		args = append(args, *to)
 		variableIndex++
 	}
-	fmt.Println(query)
-	fmt.Println(args)
 	rows, err = tx.Query(query, args...)
 	if err != nil {
 		fmt.Println(err) // TODO: Use a logger
