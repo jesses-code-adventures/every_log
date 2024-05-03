@@ -36,8 +36,7 @@ func NewServerHandler(db *db.Db) ServerHandler {
 func (s *ServerHandler) HandleAuthMiddleware(w http.ResponseWriter, r *http.Request, handler http.HandlerFunc) {
 	err := s.authorize.Authorize(w, r)
 	if err != nil {
-		w.WriteHeader(http.StatusUnauthorized)
-		w.Write([]byte(err.Error()))
+		//TODO: should http headers be set here?
 		return
 	}
 	handler.ServeHTTP(w, r)

@@ -1,13 +1,14 @@
 package db
 
 import (
+	"crypto/rand"
 	"database/sql"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"os"
 	"strings"
-	"crypto/rand"
-	"encoding/hex"
+	"time"
 
 	"github.com/jesses-code-adventures/every_log/error_msgs"
 	"github.com/joho/godotenv"
@@ -197,6 +198,93 @@ func (db Db) CreateLog(userId string, project_id string, level_id int, process_i
 	return logId, nil
 }
 
+type Log struct {
+	Id        string    `json:"id"`
+	CreatedAt time.Time `json:"created_at"`
+	UserId    string    `json:"user_id"`
+	ProjectId string    `json:"project_id"`
+	LevelId   int       `json:"level_id"`
+	ProcessId *string   `json:"process_id"`
+	Message   *string   `json:"message"`
+	Traceback *string   `json:"traceback"`
+}
+
+func (db Db) getPermittedProjectIdFromUserProject(userId string, project_id string) (string, error) {
+	var permittedProjectId string
+	err := db.Db.QueryRow(`SELECT permitted_project_id
+FROM api_key
+LEFT JOIN permitted_project
+ON permitted_project.id = api_key.permitted_project_id
+WHERE user_id = $1
+AND permitted_project.project_id = $2`, userId, project_id).Scan(&permittedProjectId)
+	if err != nil {
+		fmt.Println(err) // TODO: Use a logger
+		return "", errors.New(error_msgs.UNAUTHORIZED)
+	}
+	return permittedProjectId, nil
+}
+
+func (db Db) GetLogs(userId string, projectId *string, levelId *int, processId *string, orgId *string) ([]Log, error) {
+	var logs []Log
+	tx, err := db.Db.Begin()
+	if err != nil {
+		fmt.Println(err) // TODO: Use a logger,
+		return nil, errors.New(error_msgs.DATABASE_ERROR)
+	}
+	var rows *sql.Rows
+	query := "SELECT * FROM log WHERE user_id = $1"
+	variableIndex := 2
+	args := make([]any, 0)
+	args = append(args, userId)
+	// I kind of hate this
+	if projectId != nil {
+		query += fmt.Sprintf(" AND project_id = $%d", variableIndex)
+		args = append(args, *projectId)
+		variableIndex++
+	}
+	if levelId != nil {
+		query += fmt.Sprintf(" AND level_id = $%d", variableIndex)
+		args = append(args, *levelId)
+		variableIndex++
+	}
+	if processId != nil {
+		query += fmt.Sprintf(" AND process_id = $%d", variableIndex)
+		args = append(args, *processId)
+		variableIndex++
+	}
+	if orgId != nil {
+		query += fmt.Sprintf(" AND org_id = $%d", variableIndex)
+		args = append(args, *orgId)
+		variableIndex++
+	}
+	rows, err = tx.Query(query, args...)
+	if err != nil {
+		fmt.Println(err) // TODO: Use a logger
+		innerErr := tx.Rollback()
+		if innerErr != nil {
+			fmt.Println(innerErr) // TODO: Use a logger
+			return nil, errors.New(error_msgs.DATABASE_ERROR)
+		}
+		return nil, errors.New(error_msgs.DATABASE_ERROR)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var log Log
+		err = rows.Scan(&log.Id, &log.CreatedAt, &log.UserId, &log.ProjectId, &log.LevelId, &log.ProcessId, &log.Message, &log.Traceback)
+		if err != nil {
+			fmt.Println(err) // TODO: Use a logger
+			innerErr := tx.Rollback()
+			if innerErr != nil {
+				fmt.Println(innerErr) // TODO: Use a logger
+				return nil, errors.New(error_msgs.DATABASE_ERROR)
+			}
+			return nil, errors.New(error_msgs.DATABASE_ERROR)
+		}
+		logs = append(logs, log)
+	}
+	return logs, nil
+}
+
 func (db Db) getPermittedProjectId(userId string, projectId string, tx *sql.Tx) (string, error) {
 	var id string
 	var err error
@@ -233,15 +321,10 @@ WHERE api_key.key = $1;`, apiKey).Scan(&id, &matchingUserId)
 
 // GenerateRandomAPIKey generates a random alphanumeric API key of the given length
 func GenerateRandomAPIKey(length int) (string, error) {
-	// Create a byte slice to hold the random bytes
 	bytes := make([]byte, length/2) // Using hex encoding, so each byte gives two characters
-
-	// Fill the byte slice with random data
 	if _, err := rand.Read(bytes); err != nil {
 		return "", err
 	}
-
-	// Return the hex-encoded string
 	return hex.EncodeToString(bytes), nil
 }
 

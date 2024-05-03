@@ -1,7 +1,12 @@
 #!/bin/zsh
 
+echo "creating user"
 dev/scripts/create_test_user
+echo "authenticating user"
 dev/scripts/authenticate_test_user
+echo "testing authorization with token"
 dev/scripts/authorize
+echo "creating test project"
 dev/scripts/create_test_project
+echo "creating test api key"
 dev/scripts/create_test_api_key

@@ -18,11 +18,20 @@ func BasicValidateRequest(w http.ResponseWriter, r *http.Request) error {
 		http.Error(w, error_msgs.JsonifyError("Invalid Accept Header"), http.StatusBadRequest)
 		return errors.New("Accept")
 	}
-	apiKey := r.Header.Get("x-api-key")
-	authorization := r.Header.Get("Authorization")
-	if !(r.Method == http.MethodPost) && !(r.RequestURI == "/user") && !(r.RequestURI == "/authenticate") && apiKey == "" && authorization == "" {
-		http.Error(w, error_msgs.JsonifyError("Missing authorization header and api key"), http.StatusUnauthorized)
-		return errors.New("Auth")
+	if (r.Method == http.MethodPost && r.RequestURI == "/user") {
+		return nil
+	}
+	if (r.Method == http.MethodPost && r.RequestURI == "/authenticate") {
+		return nil
+	}
+	authorization, err := r.Cookie("Authorization")
+	if err != nil {
+		http.Error(w, error_msgs.JsonifyError("Missing authorization header"), http.StatusUnauthorized)
+		return errors.New(error_msgs.UNAUTHORIZED)
+	}
+	if authorization.String() == "" {
+		http.Error(w, error_msgs.JsonifyError(error_msgs.UNAUTHORIZED), http.StatusUnauthorized)
+		return errors.New(error_msgs.UNAUTHORIZED)
 	}
 	return nil
 }

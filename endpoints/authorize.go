@@ -127,17 +127,14 @@ func (a *AuthorizationHandler) decodeJWT(tokenString string) (*Claims, error) {
 		// Return the secret key for verification
 		return []byte(a.signing_key), nil
 	})
-
 	if err != nil {
 		fmt.Println(err) // TODO: Use a logger
 		return nil, errors.New(error_msgs.AUTHORIZATION_PROCESS_ERROR)
 	}
-
 	// Check if the token is valid
 	if claims, ok := token.Claims.(*Claims); ok && token.Valid {
 		return claims, nil
 	}
-
 	return nil, errors.New(error_msgs.INVALID_TOKEN)
 }
 
@@ -150,7 +147,7 @@ func getTokenFromCookies(r *http.Request, user_id string) *incomingAuthorization
 	cookies := r.Cookies()
 	var token string
 	for _, cookie := range cookies {
-		if cookie.Name == "token" {
+		if cookie.Name == "Authorization" {
 			token = cookie.Value
 		}
 	}

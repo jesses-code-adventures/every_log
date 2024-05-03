@@ -9,8 +9,6 @@ curl -X POST \
     -H "Content-Type: application/json" \
     -H "Accept: application/json" \
     -H "user_id: ${user_id}" \
-    -H "Authorization: Bearer ${token}" \
-    -b "token=${token}" \
-    -d '{"token": "'"${token}"'"}' \
+    -b "Authorization=${token}" \
     --no-progress-meter \
     localhost:8080/authorize

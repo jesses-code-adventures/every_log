@@ -1,7 +1,7 @@
 #!/bin/zsh
 
 # Parse command-line flags
-while getopts l:p:m:e:i:t:u:a: flag
+while getopts l:p:m:e:i:t:u:a:o: flag
 do
     case "${flag}" in
         l) level_id="${OPTARG}";;
@@ -10,6 +10,7 @@ do
         m) message="${OPTARG}";;
         e) traceback="${OPTARG}";;
         i) process_id="${OPTARG}";;
+        o) org_id="${OPTARG}";;
         u) user_id="${OPTARG}";;
         t) token="${OPTARG}";;
         *) echo "Invalid flag"; exit 1;;
@@ -17,9 +18,15 @@ do
 done
 
 # Ensure all required flags are provided
-if [ -z "${level_id}" ] || [ -z "${project_id}" ] || [ -z "${message}" ] || [ -z "${token}" ] || [ -z "${user_id}" ] || [ -z "${api_key}" ]; then
-    echo "Missing required flags: user_id, token, level_id, project_id, or message"
+if [ -z "${token}" ] || [ -z "${user_id}" ] ; then
+    echo "Missing required flags: user_id or token"
     exit 1
+fi
+
+if [ "${message}" ]; then
+    message=", \"message\": \"${message}\""
+else
+    message=""
 fi
 
 if [ "${process_id}" ]; then
@@ -33,15 +40,39 @@ if [ "${traceback}" ]; then
 else
     traceback=""
 fi
+if [ "${org_id}" ]; then
+    org_id=", \"org_id\": \"${org_id}\""
+else
+    org_id=""
+fi
+if [ "${level_id}" ]; then
+    level_id=", \"level_id\": \"${level_id}\""
+else
+    level_id=""
+fi
+if [ "${project_id}" ]; then
+    project_id=", \"project_id\": \"${project_id}\""
+else
+    project_id=""
+fi
 
+if [ -z "${message}" ] && [ -z "${process_id}" ] && [ -z "${traceback}" ] && [ -z "${org_id}" ] && [ -z "${level_id}" ] && [ -z "${project_id}" ] ; then
+    data=""
+else
+    value="${message}${process_id}${traceback}${org_id}${level_id}${project_id}"
+    value="${value:2}"
+    data="{${value}}"
+fi
+
+echo "Data: ${data}"
 
 # Send data using curl with interpolated variables
-curl -X POST \
+curl -X GET \
      -H "Content-Type: application/json" \
      -H "Accept: application/json" \
      -H "user_id: ${user_id}" \
      -H "api_key: ${api_key}" \
      -b "Authorization=${token}" \
-     -d "{\"level_id\": ${level_id}, \"project_id\": \"${project_id}\"${process_id}${traceback}}" \
+     -d "${data}" \
      --no-progress-meter \
      localhost:8080/log

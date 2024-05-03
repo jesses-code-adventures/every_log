@@ -22,6 +22,6 @@ curl -X POST \
      -H "Content-Type: application/json" \
      -H "Accept: application/json" \
      -H "user_id: ${user_id}" \
-     -b "token=${token}" \
+     -b "Authorization=${token}" \
      --no-progress-meter \
      localhost:8080/project/${project_id}/key
