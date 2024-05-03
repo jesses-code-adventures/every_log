@@ -74,12 +74,13 @@ Note any of these endpoints could return an unauthorized if the token has expire
 - [x] POST /project (user_id, name, optional description) -> project_id (New Project)
 - [x] POST /project/{project_id}/key (email, password) -> api_key (Get API key for project)
 - [x] POST /log (level_id, project_id, message, optional process_id, optional traceback) (Create Log)
-- [ ] POST /user/location (address1, city, state, country, optional latitude, optional longitude, optional address2) -> location_id (Set user location)
 - [ ] POST /org (name) -> org_id (Create Org)
-- [ ] GET /log (optional projectId, optional level_id, optional process_id, optional org_id, optional from_datetime, optional to_datetime) -> Array<Log> (Get Logs)
+- [ ] POST /user/location (address1, city, state, country, optional latitude, optional longitude, optional address2) -> location_id (Set user location)
+- [x] GET /log (optional projectId, optional level_id, optional process_id, optional org_id, optional from_datetime, optional to_datetime) -> Array<Log> (Get Logs)
 - [ ] GET /log/{log_id} (Get log)
 - [ ] GET /project -> Array<Project> (Get projects the user has access to, optionally filtering by org they belong to)
 - [ ] GET /filterItems GetProjectsAndOrgs() -> {"projects": Array<Project>, "orgs": Array<Org>}
+- [ ] Fuzzy search logs
 
 #### Org auth (token and user that has accepted an org invite)
 
