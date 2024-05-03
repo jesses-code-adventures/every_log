@@ -224,7 +224,7 @@ AND permitted_project.project_id = $2`, userId, project_id).Scan(&permittedProje
 	return permittedProjectId, nil
 }
 
-func (db Db) GetLogs(userId string, projectId *string, levelId *int, processId *string, orgId *string) ([]Log, error) {
+func (db Db) GetLogs(userId string, projectId *string, levelId *int, processId *string, orgId *string, from *time.Time, to *time.Time) ([]Log, error) {
 	var logs []Log
 	tx, err := db.Db.Begin()
 	if err != nil {
@@ -257,6 +257,18 @@ func (db Db) GetLogs(userId string, projectId *string, levelId *int, processId *
 		args = append(args, *orgId)
 		variableIndex++
 	}
+	if from != nil {
+		query += fmt.Sprintf(" AND created_at >= $%d", variableIndex)
+		args = append(args, *from)
+		variableIndex++
+	}
+	if to != nil {
+		query += fmt.Sprintf(" AND created_at <= $%d", variableIndex)
+		args = append(args, *to)
+		variableIndex++
+	}
+	fmt.Println(query)
+	fmt.Println(args)
 	rows, err = tx.Query(query, args...)
 	if err != nil {
 		fmt.Println(err) // TODO: Use a logger

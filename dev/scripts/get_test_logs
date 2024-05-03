@@ -5,5 +5,7 @@ token=$(dev/scripts/get_token)
 user_id=$(cat dev/scripts/user_id)
 project_id=$(cat dev/scripts/project_id)
 api_key=$(cat dev/scripts/api_key)
-response=$(dev/scripts/get_logs -p $project_id -u $user_id -t $token -a $api_key)
+from_date="2024-05-01T00:00:00Z"
+to_date="2024-05-04T23:59:59Z"
+response=$(dev/scripts/get_logs -p $project_id -u $user_id -t $token -a $api_key -s $from_date -f $to_date)
 echo $response

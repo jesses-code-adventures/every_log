@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/jesses-code-adventures/every_log/db"
 	"github.com/jesses-code-adventures/every_log/error_msgs"
@@ -97,19 +98,21 @@ func (p LogHandler) getLogs(r *http.Request) ([]byte, error) {
 	body := r.Body
 	defer body.Close()
 	var parsedBody struct {
-		ProjectId *string `json:"project_id"`
-		LevelId   *int    `json:"level_id"`
-		ProcessId *string `json:"process_id"`
-		OrgId     *string `json:"org_id"`
-		Message   *string `json:"message"`
-		Traceback *string `json:"traceback"`
+		ProjectId *string    `json:"project_id"`
+		LevelId   *int       `json:"level_id"`
+		ProcessId *string    `json:"process_id"`
+		OrgId     *string    `json:"org_id"`
+		Message   *string    `json:"message"`
+		Traceback *string    `json:"traceback"`
+		From      *time.Time `json:"from"`
+		To        *time.Time `json:"to"`
 	}
 	err := json.NewDecoder(body).Decode(&parsedBody)
 	if err != nil {
 		fmt.Println(err) //TODO: Use a logger
 		return nil, errors.New(error_msgs.JSON_PARSING_ERROR)
 	}
-	resp, err := p.Db.GetLogs(userId, parsedBody.ProjectId, parsedBody.LevelId, parsedBody.ProcessId, parsedBody.OrgId)
+	resp, err := p.Db.GetLogs(userId, parsedBody.ProjectId, parsedBody.LevelId, parsedBody.ProcessId, parsedBody.OrgId, parsedBody.From, parsedBody.To)
 	if err != nil {
 		return nil, err
 	}
