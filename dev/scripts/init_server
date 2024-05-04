@@ -2,6 +2,8 @@
 
 echo "creating user"
 dev/scripts/create_test_user
+echo "creating second user"
+dev/scripts/create_second_test_user
 echo "authenticating user"
 dev/scripts/authenticate_test_user
 echo "testing authorization with token"
@@ -10,3 +12,5 @@ echo "creating test project"
 dev/scripts/create_test_project
 echo "creating test api key"
 dev/scripts/create_test_api_key
+echo "creating test org"
+cev/scripts/create_test_org
