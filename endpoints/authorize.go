@@ -5,10 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 	"time"
-
-	"os"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/jesses-code-adventures/every_log/db"

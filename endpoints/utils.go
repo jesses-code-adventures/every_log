@@ -18,10 +18,10 @@ func BasicValidateRequest(w http.ResponseWriter, r *http.Request) error {
 		http.Error(w, error_msgs.JsonifyError("Invalid Accept Header"), http.StatusBadRequest)
 		return errors.New("Accept")
 	}
-	if (r.Method == http.MethodPost && r.RequestURI == "/user") {
+	if r.Method == http.MethodPost && r.RequestURI == "/user" {
 		return nil
 	}
-	if (r.Method == http.MethodPost && r.RequestURI == "/authenticate") {
+	if r.Method == http.MethodPost && r.RequestURI == "/authenticate" {
 		return nil
 	}
 	authorization, err := r.Cookie("Authorization")
