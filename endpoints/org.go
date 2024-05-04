@@ -11,15 +11,15 @@ import (
 	"github.com/jesses-code-adventures/every_log/error_msgs"
 )
 
-type LogHandler struct {
+type OrgHandler struct {
 	Db *db.Db
 }
 
-func (p LogHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (o OrgHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	accept := r.Header.Get("Accept")
 	switch accept {
 	case "application/json":
-		p.ServeJson(w, r)
+		o.ServeJson(w, r)
 		return
 	default:
 		w.WriteHeader(http.StatusNotAcceptable)
@@ -27,10 +27,10 @@ func (p LogHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (p LogHandler) ServeJson(w http.ResponseWriter, r *http.Request) {
+func (o OrgHandler) ServeJson(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodPost:
-		id, err := p.create(r)
+		id, err := o.create(r)
 		if err != nil {
 			status := error_msgs.GetErrorHttpStatus(err)
 			http.Error(w, error_msgs.JsonifyError(err.Error()), status)
@@ -39,7 +39,7 @@ func (p LogHandler) ServeJson(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Write([]byte(fmt.Sprintf(`{"id": %s}`, id)))
 	case http.MethodGet:
-		logs, err := p.get(r)
+		logs, err := o.get(r)
 		if err != nil {
 			status := error_msgs.GetErrorHttpStatus(err)
 			http.Error(w, error_msgs.JsonifyError(err.Error()), status)
@@ -52,31 +52,25 @@ func (p LogHandler) ServeJson(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (p LogHandler) create(r *http.Request) ([]byte, error) {
+func (o OrgHandler) create(r *http.Request) ([]byte, error) {
 	userId := r.Header.Get("user_id")
 	if userId == "" {
 		return nil, errors.New(error_msgs.USER_ID_REQUIRED)
-	}
-	apiKey := r.Header.Get("api_key")
-	if apiKey == "" {
-		return nil, errors.New(error_msgs.API_KEY_REQUIRED)
 	}
 	arr := make([]byte, 0)
 	body := r.Body
 	defer body.Close()
 	var parsedBody struct {
-		ProjectId string  `json:"project_id"`
-		LevelId   int     `json:"level_id"`
-		ProcessId *string `json:"process_id"`
-		Message   string  `json:"message"`
-		Traceback *string `json:"traceback"`
+		Name        string  `json:"name"`
+		Description *string `json:"description"`
+		LocationId  *string `json:"location_id"`
 	}
 	err := json.NewDecoder(body).Decode(&parsedBody)
 	if err != nil {
 		fmt.Println(err) //TODO: Use a logger
 		return nil, errors.New(error_msgs.JSON_PARSING_ERROR)
 	}
-	resp, err := p.Db.CreateLog(userId, parsedBody.ProjectId, parsedBody.LevelId, parsedBody.ProcessId, parsedBody.Message, parsedBody.Traceback, apiKey)
+	resp, err := o.Db.CreateOrg(userId, parsedBody.Name, parsedBody.Description, parsedBody.LocationId)
 	if err != nil {
 		return nil, err
 	}
@@ -88,7 +82,7 @@ func (p LogHandler) create(r *http.Request) ([]byte, error) {
 	return arr, err
 }
 
-func (p LogHandler) get(r *http.Request) ([]byte, error) {
+func (o OrgHandler) get(r *http.Request) ([]byte, error) {
 	userId := r.Header.Get("user_id")
 	if userId == "" {
 		return nil, errors.New(error_msgs.USER_ID_REQUIRED)
@@ -97,21 +91,17 @@ func (p LogHandler) get(r *http.Request) ([]byte, error) {
 	body := r.Body
 	defer body.Close()
 	var parsedBody struct {
-		ProjectId *string    `json:"project_id"`
-		LevelId   *int       `json:"level_id"`
-		ProcessId *string    `json:"process_id"`
-		OrgId     *string    `json:"org_id"`
-		Message   *string    `json:"message"`
-		Traceback *string    `json:"traceback"`
-		From      *time.Time `json:"from"`
-		To        *time.Time `json:"to"`
+		OrgId *string    `json:"org_id"`
+		Name  *string    `json:"name"`
+		From  *time.Time `json:"from"`
+		To    *time.Time `json:"to"`
 	}
 	err := json.NewDecoder(body).Decode(&parsedBody)
 	if err != nil {
 		fmt.Println(err) //TODO: Use a logger
 		return nil, errors.New(error_msgs.JSON_PARSING_ERROR)
 	}
-	resp, err := p.Db.GetLogs(userId, parsedBody.ProjectId, parsedBody.LevelId, parsedBody.ProcessId, parsedBody.OrgId, parsedBody.From, parsedBody.To)
+	resp, err := o.Db.GetOrgs(userId, parsedBody.OrgId, parsedBody.Name, parsedBody.From, parsedBody.To)
 	if err != nil {
 		return nil, err
 	}

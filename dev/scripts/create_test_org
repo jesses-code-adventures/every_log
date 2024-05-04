@@ -1,0 +1,7 @@
+#!/bin/zsh
+
+# Get token and user_id
+token=$(dev/scripts/get_token)
+user_id=$(cat dev/scripts/user_id)
+response=$(dev/scripts/create_org -n "test org" -u $user_id -t $token -d "test description")
+echo $response

@@ -1,8 +1,8 @@
 package endpoints
 
 import (
-	"net/http"
 	"fmt"
+	"net/http"
 
 	"github.com/jesses-code-adventures/every_log/db"
 )
@@ -17,6 +17,7 @@ type ServerHandler struct {
 	project      ProjectHandler
 	dbUser       DbUserHandler
 	log          LogHandler
+	org          OrgHandler
 }
 
 func NewServerHandler(db *db.Db) ServerHandler {
@@ -30,6 +31,7 @@ func NewServerHandler(db *db.Db) ServerHandler {
 		project:      ProjectHandler{Db: db},
 		dbUser:       DbUserHandler{Db: db},
 		log:          LogHandler{Db: db},
+		org:          OrgHandler{Db: db},
 	}
 	return handler
 }
@@ -38,7 +40,7 @@ func (s *ServerHandler) HandleAuthMiddleware(w http.ResponseWriter, r *http.Requ
 	err := s.authorize.Authorize(w, r)
 	if err != nil {
 		//TODO: should http headers be set here?
-		fmt.Println("got error: ", err)
+		fmt.Println("got auth middleware error: ", err)
 		return
 	}
 	handler.ServeHTTP(w, r)
@@ -71,5 +73,7 @@ You can create a user by sending a POST request to /user, get a list of tables b
 		s.HandleAuthMiddleware(w, r, s.project.ServeHTTP)
 	case "/log":
 		s.HandleAuthMiddleware(w, r, s.log.ServeHTTP)
+	case "/org":
+		s.HandleAuthMiddleware(w, r, s.org.ServeHTTP)
 	}
 }

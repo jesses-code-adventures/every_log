@@ -1,0 +1,39 @@
+#!/bin/zsh
+
+# Parse command-line flags
+while getopts n:d:t:u:l: flag
+do
+    case "${flag}" in
+        n) name="${OPTARG}";;
+        d) description="${OPTARG}";;
+        t) token="${OPTARG}";;
+        u) user_id="${OPTARG}";;
+        l) location_id="${OPTARG}";;
+        *) echo "Invalid flag"; exit 1;;
+    esac
+done
+
+# Ensure all required flags are provided
+if [ -z "${name}" ] || [ -z "${token}" ] || [ -z "${user_id}" ]; then
+    echo "Missing required flags: name, token, or user_id"
+    exit 1
+fi
+
+data="{\"name\": \"${name}\""
+if [ -n "${description}" ]; then
+    data="${data}, \"description\": \"${description}\""
+fi
+if [ -n "${location_id}" ]; then
+    data="${data}, \"location_id\": \"${location_id}\""
+fi
+data="${data}}"
+
+# Send data using curl with interpolated variables
+curl -X POST \
+     -H "Content-Type: application/json" \
+     -H "Accept: application/json" \
+     -H "user_id: ${user_id}" \
+     -b "Authorization=${token}" \
+     -d $data \
+     --no-progress-meter \
+     localhost:8080/org

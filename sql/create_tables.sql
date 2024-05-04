@@ -26,7 +26,8 @@ CREATE TABLE IF NOT EXISTS single_user (
 -- Create table for organizations
 CREATE TABLE IF NOT EXISTS org (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-    name VARCHAR(255),
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     location_id UUID,
     FOREIGN KEY (location_id) REFERENCES location(id)
