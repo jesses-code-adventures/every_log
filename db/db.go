@@ -183,14 +183,13 @@ func (db Db) CreateProject(user_id string, name string, description *string) (st
 }
 
 func (db Db) CreateOrg(userId string, name string, description *string, location_id *string) (string, error) {
-	fmt.Println("in db create org")
 	var orgId string
 	tx, err := db.Db.Begin()
-	query := "INSERT INTO org (user_id, name"
+	query := "INSERT INTO org (name, owner"
 	values := "VALUES ($1, $2"
 	idx := 3
 	args := make([]any, 0)
-	args = append(args, userId, name)
+	args = append(args, name, userId)
 	if description != nil {
 		query += ", description"
 		values += ", $" + fmt.Sprint(idx)
@@ -203,9 +202,26 @@ func (db Db) CreateOrg(userId string, name string, description *string, location
 		args = append(args, *location_id)
 		idx++
 	}
-	query += fmt.Sprintf(") %s RETURNING id", values)
+	query += fmt.Sprintf(") %s) RETURNING id", values)
 	row := tx.QueryRow(query, args...)
 	err = row.Scan(&orgId)
+	if err != nil {
+		var respErr error
+		if strings.Contains(err.Error(), "duplicate") {
+			respErr = errors.New(error_msgs.ORG_EXISTS)
+		} else {
+			respErr = errors.New(error_msgs.DATABASE_ERROR)
+		}
+		fmt.Println(err) // TODO: Use a logger
+		innerErr := tx.Rollback()
+		if innerErr != nil {
+			fmt.Println(innerErr) // TODO: Use a logger
+			return "", errors.New(error_msgs.DATABASE_ERROR)
+		}
+		return "", respErr
+	}
+	query = "INSERT INTO user_org (user_id, org_id, level) VALUES ($1, $2, 500)"
+	_, err = tx.Exec(query, userId, orgId)
 	if err != nil {
 		fmt.Println(err) // TODO: Use a logger
 		innerErr := tx.Rollback()

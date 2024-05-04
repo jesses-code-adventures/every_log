@@ -26,11 +26,19 @@ CREATE TABLE IF NOT EXISTS single_user (
 -- Create table for organizations
 CREATE TABLE IF NOT EXISTS org (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    owner UUID NOT NULL,
     name VARCHAR(255) NOT NULL,
     description TEXT,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     location_id UUID,
+    CONSTRAINT org_unique_for_user UNIQUE (owner, name),
+    FOREIGN KEY (owner) REFERENCES single_user(id),
     FOREIGN KEY (location_id) REFERENCES location(id)
+);
+
+CREATE TABLE IF NOT EXISTS user_org_level (
+    id INT PRIMARY KEY NOT NULL,
+    value VARCHAR(255)
 );
 
 -- Create table for single_user-organization relationships (many-to-many)
@@ -39,9 +47,10 @@ CREATE TABLE IF NOT EXISTS user_org (
     user_id UUID,
     org_id UUID,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    level VARCHAR(10),
+    level INT,
     FOREIGN KEY (user_id) REFERENCES single_user(id),
     FOREIGN KEY (org_id) REFERENCES org(id),
+    FOREIGN KEY (level) REFERENCES user_org_level(id),
     CONSTRAINT user_org_unique UNIQUE (user_id, org_id)
 );
 

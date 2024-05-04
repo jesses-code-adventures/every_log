@@ -17,6 +17,7 @@ const AUTHORIZATION_TOKEN_REQUIRED = "Authorization token required"
 const EMAIL_EXISTS = "Email exists"
 const PROJECT_EXISTS = "Project exists"
 const USER_EXISTS = "User exists"
+const ORG_EXISTS = "You have already created that organization"
 const UNACCEPTABLE_HTTP_METHOD = "Unacceptable http method"
 const UNAUTHORIZED = "Unauthorized"
 const EXPIRED_TOKEN = "Expired token"
@@ -34,7 +35,7 @@ func GetErrorHttpStatus(e error) int {
 	switch e.Error() {
 	case USER_ID_REQUIRED, API_KEY_REQUIRED, USER_TOKEN_REQUIRED, AUTHORIZATION_TOKEN_REQUIRED, EXPIRED_TOKEN, INVALID_TOKEN, UNAUTHORIZED:
 		return http.StatusUnauthorized
-	case USER_EXISTS, EMAIL_EXISTS, PROJECT_EXISTS:
+	case USER_EXISTS, EMAIL_EXISTS, PROJECT_EXISTS, ORG_EXISTS:
 		return http.StatusConflict
 	default:
 		if strings.HasSuffix(e.Error(), "is required") {
