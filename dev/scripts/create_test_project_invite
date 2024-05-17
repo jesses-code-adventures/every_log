@@ -1,0 +1,15 @@
+#!/bin/zsh
+
+# Get token and user_id
+token=$(dev/scripts/get_token)
+user_id=$(cat dev/scripts/user_id)
+to_user_id=$(cat dev/scripts/second_user_id)
+project_id=$(cat dev/scripts/project_id)
+api_key=$(cat dev/scripts/api_key)
+response=$(dev/scripts/create_project_invite -r $to_user_id -p $project_id -u $user_id -t $token -a $api_key)
+invite_id=$(echo "$response" | jq -r '.id')
+if [ -z "$invite_id" ] || [ "$invite_id" = "null" ]; then
+  echo "$response"
+else
+  echo $invite_id > dev/scripts/invite_id
+fi

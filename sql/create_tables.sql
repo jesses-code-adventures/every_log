@@ -111,7 +111,8 @@ CREATE TABLE IF NOT EXISTS project_invite (
     project_id UUID NOT NULL,
     FOREIGN KEY (from_user_id) REFERENCES single_user(id),
     FOREIGN KEY (to_user_id) REFERENCES single_user(id),
-    FOREIGN KEY (project_id) REFERENCES project(id)
+    FOREIGN KEY (project_id) REFERENCES project(id),
+    CONSTRAINT project_invite_unique UNIQUE (from_user_id, to_user_id, project_id)
 );
 
 -- Create table for invites

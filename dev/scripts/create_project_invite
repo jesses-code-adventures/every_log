@@ -1,0 +1,31 @@
+#!/bin/zsh
+
+# Parse command-line flags
+while getopts u:t:r:p:a: flag
+do
+    case "${flag}" in
+        u) user_id="${OPTARG}";;
+        t) token="${OPTARG}";;
+        r) recipient_id="${OPTARG}";;
+        p) project_id="${OPTARG}";;
+        a) api_key="${OPTARG}";;
+        *) echo "Invalid flag"; exit 1;;
+    esac
+done
+
+# Ensure all required flags are provided
+if [ -z "${user_id}" ] || [ -z "${project_id}" ] || [ -z "${recipient_id}" ] || [ -z "${token}" ] || [ -z "${api_key}" ]; then
+    echo "Missing required flags: user_id, token, project_id, recipient_id, api_key"
+    exit 1
+fi
+
+# Send data using curl with interpolated variables
+curl -X POST \
+     -H "Content-Type: application/json" \
+     -H "Accept: application/json" \
+     -H "user_id: ${user_id}" \
+     -H "api_key: ${api_key}" \
+     -b "Authorization=${token}" \
+     -d "{\"to_user_id\": \"${recipient_id}\"}" \
+     --no-progress-meter \
+     localhost:8080/project/${project_id}/invite

@@ -4,3 +4,6 @@ tmp/
 dev/scripts/user_id
 dev/scripts/project_id
 dev/scripts/api_key
+dev/scripts/project_id
+dev/scripts/invite_id
+dev/scripts/second_user_id
