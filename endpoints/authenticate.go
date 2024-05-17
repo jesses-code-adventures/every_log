@@ -3,7 +3,7 @@ package endpoints
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"time"
@@ -16,6 +16,7 @@ import (
 
 type AuthenticationHandler struct {
 	Db          *db.Db
+	Logger      *log.Logger
 	signing_key string
 }
 
@@ -46,7 +47,7 @@ func (a AuthenticationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 func (a AuthenticationHandler) ServeJson(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodPost:
-		post, err := newIncomingAuthenticationData(r)
+		post, err := newIncomingAuthenticationData(r, a.Logger)
 		if err != nil {
 			status := error_msgs.GetErrorHttpStatus(err)
 			http.Error(w, error_msgs.JsonifyError(err.Error()), status)
@@ -73,7 +74,7 @@ func (a AuthenticationHandler) ServeJson(w http.ResponseWriter, r *http.Request)
 func (a AuthenticationHandler) authenticate(r incomingAuthenticationData) ([]byte, *http.Cookie, error) {
 	tx, err := a.Db.Db.Begin()
 	if err != nil {
-		fmt.Println(err) // TODO: Use a logger
+		a.Logger.Println(err) 
 		return nil, nil, errors.New(error_msgs.DATABASE_ERROR)
 	}
 	err = a.Db.Authenticate(r.UserId, r.Password, tx)
@@ -81,7 +82,7 @@ func (a AuthenticationHandler) authenticate(r incomingAuthenticationData) ([]byt
 		tx.Rollback()
 		return nil, nil, err
 	}
-	token, expires, err := createJWT(r.UserId, r.Email, r.Password, a.signing_key)
+	token, expires, err := createJWT(r.UserId, r.Email, r.Password, a.signing_key, a.Logger)
 	err = a.Db.UpdateUserToken(r.UserId, token, tx)
 	if err != nil {
 		tx.Rollback()
@@ -95,12 +96,12 @@ func (a AuthenticationHandler) authenticate(r incomingAuthenticationData) ([]byt
 	jsonBytes, err := json.Marshal(response)
 	if err != nil {
 		tx.Rollback()
-		fmt.Println(err) // TODO: Use a logger
+		a.Logger.Println(err) 
 		return nil, nil, errors.New(error_msgs.JSON_PARSING_ERROR)
 	}
 	err = tx.Commit()
 	if err != nil {
-		fmt.Println(err) // TODO: Use a logger
+		a.Logger.Println(err) 
 		return nil, nil, errors.New(error_msgs.DATABASE_ERROR)
 	}
 	cookie := getAuthCookie(token, expires)
@@ -126,7 +127,7 @@ type incomingAuthenticationData struct {
 	Password string `json:"password"`
 }
 
-func createJWT(userID string, email string, password string, secretKey string) (string, time.Time, error) {
+func createJWT(userID string, email string, password string, secretKey string, logger *log.Logger) (string, time.Time, error) {
 	issued := time.Now()
 	expires := issued.Add(time.Minute * EXPIRATION_MINUTES)
 	claims := jwt.MapClaims{
@@ -139,16 +140,16 @@ func createJWT(userID string, email string, password string, secretKey string) (
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	signedToken, err := token.SignedString([]byte(secretKey))
 	if err != nil {
-		fmt.Println(err) // TODO: Use a logger
+		logger.Println(err) 
 		return "", time.Time{}, errors.New(error_msgs.AUTHENTICATION_PROCESS_ERROR)
 	}
 	return signedToken, expires, nil
 }
 
-func newIncomingAuthenticationData(r *http.Request) (incomingAuthenticationData, error) {
+func newIncomingAuthenticationData(r *http.Request, logger *log.Logger) (incomingAuthenticationData, error) {
 	user_id := r.Header.Get("user_id")
 	if user_id == "" {
-		fmt.Println("user id not found") // TODO: Use a logger
+		logger.Println("user id not found") 
 		return incomingAuthenticationData{}, errors.New(error_msgs.USER_ID_REQUIRED)
 	}
 	body := r.Body
@@ -160,7 +161,7 @@ func newIncomingAuthenticationData(r *http.Request) (incomingAuthenticationData,
 	}
 	err := json.NewDecoder(body).Decode(&decodedBody)
 	if err != nil {
-		fmt.Println(err) // TODO: Use a logger
+		logger.Println(err)
 		return incomingAuthenticationData{}, errors.New(error_msgs.JSON_PARSING_ERROR)
 	}
 	return incomingAuthenticationData{UserId: user_id, Email: decodedBody.Email, Password: decodedBody.Password}, nil

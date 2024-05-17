@@ -13,7 +13,7 @@ func (db Db) CheckTableExists(name string) ([]byte, error) {
 	var table_name string
 	err := db.Db.QueryRow(query).Scan(&table_name)
 	if err != nil {
-		fmt.Println(err) // TODO: Use a logger
+		db.Logger.Println(err)
 		return []byte{}, errors.New(error_msgs.DATABASE_ERROR)
 	}
 	resp := struct {
@@ -23,7 +23,7 @@ func (db Db) CheckTableExists(name string) ([]byte, error) {
 	}
 	parsed, err := json.Marshal(resp)
 	if err != nil {
-		fmt.Println(err) // TODO: Use a logger
+		db.Logger.Println(err)
 		return parsed, errors.New(error_msgs.JSON_PARSING_ERROR)
 	}
 	return parsed, nil
@@ -42,7 +42,7 @@ ORDER BY 1;`
 	rows, err := db.Db.Query(query)
 	names := []string{}
 	if err != nil {
-		fmt.Println(err) // TODO: Use a logger
+		db.Logger.Println(err)
 		return []byte{}, errors.New(error_msgs.DATABASE_ERROR)
 	}
 	defer rows.Close()
@@ -56,7 +56,7 @@ ORDER BY 1;`
 	}
 	resp, err := json.Marshal(names)
 	if err != nil {
-		fmt.Println(err) // TODO: Use a logger
+		db.Logger.Println(err)
 		return resp, errors.New(error_msgs.JSON_PARSING_ERROR)
 	}
 	return resp, nil
@@ -67,7 +67,7 @@ func (db Db) GetCurrentUser() ([]byte, error) {
 	var user string
 	err := db.Db.QueryRow(query).Scan(&user)
 	if err != nil {
-		fmt.Println(err) // TODO: Use a logger
+		db.Logger.Println(err)
 		return []byte{}, errors.New(error_msgs.DATABASE_ERROR)
 	}
 	resp := struct {
@@ -77,7 +77,7 @@ func (db Db) GetCurrentUser() ([]byte, error) {
 	}
 	parsed, err := json.Marshal(resp)
 	if err != nil {
-		fmt.Println(err) // TODO: Use a logger
+		db.Logger.Println(err)
 		return parsed, errors.New(error_msgs.JSON_PARSING_ERROR)
 	}
 	return parsed, nil

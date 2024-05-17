@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"time"
 
@@ -12,7 +13,8 @@ import (
 )
 
 type OrgHandler struct {
-	Db *db.Db
+	Db     *db.Db
+	Logger *log.Logger
 }
 
 func (o OrgHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -67,7 +69,7 @@ func (o OrgHandler) create(r *http.Request) ([]byte, error) {
 	}
 	err := json.NewDecoder(body).Decode(&parsedBody)
 	if err != nil {
-		fmt.Println(err) //TODO: Use a logger
+		o.Logger.Println(err)
 		return nil, errors.New(error_msgs.JSON_PARSING_ERROR)
 	}
 	resp, err := o.Db.CreateOrg(userId, parsedBody.Name, parsedBody.Description, parsedBody.LocationId)
@@ -76,7 +78,7 @@ func (o OrgHandler) create(r *http.Request) ([]byte, error) {
 	}
 	arr, err = json.Marshal(resp)
 	if err != nil {
-		fmt.Println(err) // TODO: Use a logger
+		o.Logger.Println(err)
 		return nil, errors.New(error_msgs.JSON_PARSING_ERROR)
 	}
 	return arr, err
@@ -98,7 +100,7 @@ func (o OrgHandler) get(r *http.Request) ([]byte, error) {
 	}
 	err := json.NewDecoder(body).Decode(&parsedBody)
 	if err != nil {
-		fmt.Println(err) //TODO: Use a logger
+		o.Logger.Println(err)
 		return nil, errors.New(error_msgs.JSON_PARSING_ERROR)
 	}
 	resp, err := o.Db.GetOrgs(userId, parsedBody.OrgId, parsedBody.Name, parsedBody.From, parsedBody.To)
@@ -107,7 +109,7 @@ func (o OrgHandler) get(r *http.Request) ([]byte, error) {
 	}
 	arr, err = json.Marshal(resp)
 	if err != nil {
-		fmt.Println(err) // TODO: Use a logger
+		o.Logger.Println(err)
 		return nil, errors.New(error_msgs.JSON_PARSING_ERROR)
 	}
 	return arr, err

@@ -38,7 +38,7 @@ func (db Db) Authorize(user_id string, token string, tx *sql.Tx) error {
 		err = db.Db.QueryRow("SELECT token FROM single_user WHERE id = $1", user_id).Scan(&storedToken)
 	}
 	if err != nil {
-		fmt.Println(err) // TODO: Use a logger
+		db.Logger.Println(err)
 		return errors.New(error_msgs.DATABASE_ERROR)
 	}
 	if storedToken != token {
@@ -56,11 +56,10 @@ func (db Db) UpdateUserToken(user_id string, token string, tx *sql.Tx) error {
 	if tx != nil {
 		_, err = tx.Exec("UPDATE single_user SET token = $1 WHERE id = $2", token, user_id)
 	} else {
-
 		_, err = db.Db.Exec("UPDATE single_user SET token = $1 WHERE id = $2", token, user_id)
 	}
 	if err != nil {
-		fmt.Println(err) // TODO: Use a logger
+		db.Logger.Println(err)
 		return errors.New(error_msgs.DATABASE_ERROR)
 	}
 	return nil

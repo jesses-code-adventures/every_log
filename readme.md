@@ -77,6 +77,7 @@ Note any of these endpoints could return an unauthorized if the token has expire
 - [x] POST /org (name) -> org_id (Create Org)
 - [ ] POST /user/location (address1, city, state, country, optional latitude, optional longitude, optional address2) -> location_id (Set user location)
 - [x] GET /log (optional projectId, optional level_id, optional process_id, optional org_id, optional from_datetime, optional to_datetime) -> Array<Log> (Get Logs)
+- [ ] GET /invite -> Array<Invite> (Get your pending invites)
 - [ ] GET /log/{log_id} (Get log)
 - [ ] GET /project -> Array<Project> (Get projects the user has access to, optionally filtering by org they belong to)
 - [ ] GET /filterItems GetProjectsAndOrgs() -> {"projects": Array<Project>, "orgs": Array<Org>}

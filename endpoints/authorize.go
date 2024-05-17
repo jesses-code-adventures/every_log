@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -22,6 +23,7 @@ type AuthorizationMiddleware interface {
 
 type AuthorizationHandler struct {
 	Db          *db.Db
+	Logger      *log.Logger
 	signing_key string
 }
 
@@ -68,7 +70,7 @@ func (a AuthorizationHandler) ServeJson(w http.ResponseWriter, r *http.Request) 
 // Ensures the user's authentication credentials are correct and returns a JWT token
 // The user should include this token in the Authorization header of future requests
 func (a AuthorizationHandler) Authorize(w http.ResponseWriter, r *http.Request) error {
-	post, err := newIncomingPostDataAuthorize(r)
+	post, err := newIncomingPostDataAuthorize(r, a.Logger)
 	if err != nil {
 		status := error_msgs.GetErrorHttpStatus(err)
 		http.Error(w, error_msgs.JsonifyError(err.Error()), status)
@@ -76,7 +78,7 @@ func (a AuthorizationHandler) Authorize(w http.ResponseWriter, r *http.Request) 
 	}
 	tx, err := a.Db.Db.Begin()
 	if err != nil {
-		fmt.Println(err) // TODO: use a logger
+		a.Logger.Println(err) 
 		newErr := errors.New(error_msgs.DATABASE_ERROR)
 		status := error_msgs.GetErrorHttpStatus(newErr)
 		http.Error(w, error_msgs.JsonifyError(newErr.Error()), status)
@@ -98,7 +100,7 @@ func (a AuthorizationHandler) Authorize(w http.ResponseWriter, r *http.Request) 
 	}
 	if claims.ExpiresAt.Time.Before(time.Now()) {
 		tx.Rollback()
-		fmt.Println(error_msgs.EXPIRED_TOKEN) // TODO: use a logger
+		a.Logger.Println(error_msgs.EXPIRED_TOKEN) 
 		err = errors.New(error_msgs.EXPIRED_TOKEN)
 		status := error_msgs.GetErrorHttpStatus(err)
 		http.Error(w, error_msgs.JsonifyError(err.Error()), status)
@@ -120,14 +122,14 @@ func (a *AuthorizationHandler) decodeJWT(tokenString string) (*Claims, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
 		// Verify that the signing method is correct
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			fmt.Println(fmt.Errorf("unexpected signing method: %v", token.Header["alg"])) // TODO: Use a logger
+			a.Logger.Println(fmt.Errorf("unexpected signing method: %v", token.Header["alg"])) 
 			return nil, errors.New(error_msgs.AUTHENTICATION_PROCESS_ERROR)
 		}
 		// Return the secret key for verification
 		return []byte(a.signing_key), nil
 	})
 	if err != nil {
-		fmt.Println(err) // TODO: Use a logger
+		a.Logger.Println(err) 
 		if strings.Contains(err.Error(), "token is expired") {
 			return nil, errors.New(error_msgs.EXPIRED_TOKEN)
 		}
@@ -161,10 +163,10 @@ func getTokenFromCookies(r *http.Request, user_id string) *incomingAuthorization
 }
 
 // takes the token from cookies if it exists, else looks in the body for "token"
-func newIncomingPostDataAuthorize(r *http.Request) (incomingAuthorizationData, error) {
+func newIncomingPostDataAuthorize(r *http.Request, logger *log.Logger) (incomingAuthorizationData, error) {
 	user_id := r.Header.Get("user_id")
 	if user_id == "" {
-		fmt.Println(error_msgs.USER_ID_REQUIRED) // TODO: use a logger
+		logger.Println(error_msgs.USER_ID_REQUIRED) 
 		return incomingAuthorizationData{}, errors.New(error_msgs.USER_ID_REQUIRED)
 	}
 	cookieToken := getTokenFromCookies(r, user_id)
@@ -178,7 +180,7 @@ func newIncomingPostDataAuthorize(r *http.Request) (incomingAuthorizationData, e
 	}
 	err := json.NewDecoder(body).Decode(&decodedBody)
 	if err != nil {
-		fmt.Println(err) // TODO: Use a logger
+		logger.Println(err) 
 		return incomingAuthorizationData{}, errors.New(error_msgs.JSON_PARSING_ERROR)
 	}
 	return incomingAuthorizationData{UserId: user_id, Token: strings.TrimPrefix(decodedBody.Token, "Bearer: ")}, nil

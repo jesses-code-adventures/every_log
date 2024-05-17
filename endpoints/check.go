@@ -2,6 +2,7 @@ package endpoints
 
 import (
 	"errors"
+	"log"
 	"net/http"
 
 	"github.com/jesses-code-adventures/every_log/db"
@@ -9,7 +10,8 @@ import (
 )
 
 type CheckHandler struct {
-	Db *db.Db
+	Db     *db.Db
+	Logger *log.Logger
 }
 
 func (t CheckHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {

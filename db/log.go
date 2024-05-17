@@ -24,14 +24,14 @@ func (db Db) CreateLog(userId string, project_id string, level_id int, process_i
 	var logId string
 	tx, err := db.Db.Begin()
 	if err != nil {
-		fmt.Println(err) // TODO: Use a logger
+		db.Logger.Println(err)
 		return "", errors.New(error_msgs.DATABASE_ERROR)
 	}
 	_, err = db.getPermittedProjectIdFromApiKey(userId, apiKey)
 	if err != nil {
 		innerErr := tx.Rollback()
 		if innerErr != nil {
-			fmt.Println(innerErr) // TODO: Use a logger
+			db.Logger.Println(innerErr)
 			return "", errors.New(error_msgs.DATABASE_ERROR)
 		}
 		return "", err
@@ -39,17 +39,17 @@ func (db Db) CreateLog(userId string, project_id string, level_id int, process_i
 	row := tx.QueryRow("INSERT INTO log (user_id, project_id, level_id, process_id, message, traceback) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id", userId, project_id, level_id, process_id, message, traceback)
 	err = row.Scan(&logId)
 	if err != nil {
-		fmt.Println(err) // TODO: Use a logger
+		db.Logger.Println(err)
 		innerErr := tx.Rollback()
 		if innerErr != nil {
-			fmt.Println(innerErr) // TODO: Use a logger
+			db.Logger.Println(innerErr)
 			return "", errors.New(error_msgs.DATABASE_ERROR)
 		}
 		return "", errors.New(error_msgs.DATABASE_ERROR)
 	}
 	err = tx.Commit()
 	if err != nil {
-		fmt.Println(err) // TODO: Use a logger
+		db.Logger.Println(err)
 		return "", errors.New(error_msgs.DATABASE_ERROR)
 	}
 	return logId, nil
@@ -59,7 +59,7 @@ func (db Db) GetLogs(userId string, projectId *string, levelId *int, processId *
 	var logs []Log
 	tx, err := db.Db.Begin()
 	if err != nil {
-		fmt.Println(err) // TODO: Use a logger,
+		db.Logger.Println(err)
 		return nil, errors.New(error_msgs.DATABASE_ERROR)
 	}
 	var rows *sql.Rows
@@ -67,7 +67,7 @@ func (db Db) GetLogs(userId string, projectId *string, levelId *int, processId *
 	variableIndex := 2
 	args := make([]any, 0)
 	args = append(args, userId)
-	// I kind of hate this
+	// TODO: I kind of hate this
 	if projectId != nil {
 		query += fmt.Sprintf(" AND project_id = $%d", variableIndex)
 		args = append(args, *projectId)
@@ -100,10 +100,10 @@ func (db Db) GetLogs(userId string, projectId *string, levelId *int, processId *
 	}
 	rows, err = tx.Query(query, args...)
 	if err != nil {
-		fmt.Println(err) // TODO: Use a logger
+		db.Logger.Println(err)
 		innerErr := tx.Rollback()
 		if innerErr != nil {
-			fmt.Println(innerErr) // TODO: Use a logger
+			db.Logger.Println(innerErr)
 			return nil, errors.New(error_msgs.DATABASE_ERROR)
 		}
 		return nil, errors.New(error_msgs.DATABASE_ERROR)
@@ -113,10 +113,10 @@ func (db Db) GetLogs(userId string, projectId *string, levelId *int, processId *
 		var log Log
 		err = rows.Scan(&log.Id, &log.CreatedAt, &log.UserId, &log.ProjectId, &log.LevelId, &log.ProcessId, &log.Message, &log.Traceback)
 		if err != nil {
-			fmt.Println(err) // TODO: Use a logger
+			db.Logger.Println(err)
 			innerErr := tx.Rollback()
 			if innerErr != nil {
-				fmt.Println(innerErr) // TODO: Use a logger
+				db.Logger.Println(innerErr)
 				return nil, errors.New(error_msgs.DATABASE_ERROR)
 			}
 			return nil, errors.New(error_msgs.DATABASE_ERROR)

@@ -3,6 +3,7 @@ package db
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"os"
 
 	"github.com/joho/godotenv"
@@ -29,10 +30,11 @@ func getDbCredentials() dbCredentials {
 }
 
 type Db struct {
-	Db *sql.DB
+	Db     *sql.DB
+	Logger *log.Logger
 }
 
-func NewDb() Db {
+func NewDb(logger *log.Logger) Db {
 	credentials := getDbCredentials()
 	db, err := sql.Open("postgres", fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable", credentials.User, credentials.Password, credentials.Name))
 	if err != nil {
@@ -46,7 +48,7 @@ func NewDb() Db {
 	if err != nil {
 		panic(err)
 	}
-	return Db{db}
+	return Db{db, logger}
 }
 
 func (db Db) Close() {

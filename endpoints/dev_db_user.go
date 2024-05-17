@@ -1,6 +1,7 @@
 package endpoints
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/jesses-code-adventures/every_log/db"
@@ -8,7 +9,8 @@ import (
 )
 
 type DbUserHandler struct {
-	Db *db.Db
+	Db     *db.Db
+	Logger *log.Logger
 }
 
 func (t DbUserHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {

@@ -102,19 +102,31 @@ CREATE TABLE IF NOT EXISTS permitted_project (
 );
 
 -- Create table for invites
-CREATE TABLE IF NOT EXISTS invite (
+CREATE TABLE IF NOT EXISTS project_invite (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-    from_user_id UUID,
-    to_user_id UUID,
-    status VARCHAR(10),
-    project_id UUID,
-    org_id UUID,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    from_user_id UUID NOT NULL,
+    to_user_id UUID NOT NULL,
+    status VARCHAR(10) NOT NULL DEFAULT 'PENDING',
+    project_id UUID NOT NULL,
     FOREIGN KEY (from_user_id) REFERENCES single_user(id),
     FOREIGN KEY (to_user_id) REFERENCES single_user(id),
-    FOREIGN KEY (project_id) REFERENCES project(id),
-    FOREIGN KEY (org_id) REFERENCES org(id),
-    CONSTRAINT invite_constraint CHECK (project_id IS NOT NULL OR org_id IS NOT NULL)
+    FOREIGN KEY (project_id) REFERENCES project(id)
 );
+
+-- Create table for invites
+CREATE TABLE IF NOT EXISTS org_invite (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    from_user_id UUID NOT NULL,
+    to_user_id UUID NOT NULL,
+    status VARCHAR(10) NOT NULL DEFAULT 'PENDING',
+    org_id UUID NOT NULL,
+    FOREIGN KEY (from_user_id) REFERENCES single_user(id),
+    FOREIGN KEY (to_user_id) REFERENCES single_user(id),
+    FOREIGN KEY (org_id) REFERENCES org(id)
+);
+
 
 -- Create table for API keys
 CREATE TABLE IF NOT EXISTS api_key (

@@ -48,10 +48,10 @@ func (db Db) CreateOrg(userId string, name string, description *string, location
 		} else {
 			respErr = errors.New(error_msgs.DATABASE_ERROR)
 		}
-		fmt.Println(err) // TODO: Use a logger
+		db.Logger.Println(err)
 		innerErr := tx.Rollback()
 		if innerErr != nil {
-			fmt.Println(innerErr) // TODO: Use a logger
+			db.Logger.Println(innerErr)
 			return "", errors.New(error_msgs.DATABASE_ERROR)
 		}
 		return "", respErr
@@ -59,17 +59,17 @@ func (db Db) CreateOrg(userId string, name string, description *string, location
 	query = "INSERT INTO user_org (user_id, org_id, level) VALUES ($1, $2, 500)"
 	_, err = tx.Exec(query, userId, orgId)
 	if err != nil {
-		fmt.Println(err) // TODO: Use a logger
+		db.Logger.Println(err)
 		innerErr := tx.Rollback()
 		if innerErr != nil {
-			fmt.Println(innerErr) // TODO: Use a logger
+			db.Logger.Println(innerErr)
 			return "", errors.New(error_msgs.DATABASE_ERROR)
 		}
 		return "", errors.New(error_msgs.DATABASE_ERROR)
 	}
 	err = tx.Commit()
 	if err != nil {
-		fmt.Println(err) // TODO: Use a logger
+		db.Logger.Println(err)
 		return "", errors.New(error_msgs.DATABASE_ERROR)
 	}
 	return orgId, nil
@@ -79,7 +79,7 @@ func (db Db) GetOrgs(userId string, orgId *string, name *string, from *time.Time
 	var orgs []Org
 	tx, err := db.Db.Begin()
 	if err != nil {
-		fmt.Println(err) // TODO: Use a logger,
+		db.Logger.Println(err)
 		return nil, errors.New(error_msgs.DATABASE_ERROR)
 	}
 	var rows *sql.Rows
@@ -87,7 +87,7 @@ func (db Db) GetOrgs(userId string, orgId *string, name *string, from *time.Time
 	variableIndex := 2
 	args := make([]any, 0)
 	args = append(args, userId)
-	// I kind of hate this
+	// TODO: I kind of hate this
 	if orgId != nil {
 		query += fmt.Sprintf(" AND project_id = $%d", variableIndex)
 		args = append(args, *orgId)
@@ -110,10 +110,10 @@ func (db Db) GetOrgs(userId string, orgId *string, name *string, from *time.Time
 	}
 	rows, err = tx.Query(query, args...)
 	if err != nil {
-		fmt.Println(err) // TODO: Use a logger
+		db.Logger.Println(err)
 		innerErr := tx.Rollback()
 		if innerErr != nil {
-			fmt.Println(innerErr) // TODO: Use a logger
+			db.Logger.Println(innerErr)
 			return nil, errors.New(error_msgs.DATABASE_ERROR)
 		}
 		return nil, errors.New(error_msgs.DATABASE_ERROR)
@@ -123,10 +123,10 @@ func (db Db) GetOrgs(userId string, orgId *string, name *string, from *time.Time
 		var org Org
 		err = rows.Scan(&org.Id, &org.CreatedAt, &org.Name, &org.Description, &org.LocationId)
 		if err != nil {
-			fmt.Println(err) // TODO: Use a logger
+			db.Logger.Println(err)
 			innerErr := tx.Rollback()
 			if innerErr != nil {
-				fmt.Println(innerErr) // TODO: Use a logger
+				db.Logger.Println(innerErr)
 				return nil, errors.New(error_msgs.DATABASE_ERROR)
 			}
 			return nil, errors.New(error_msgs.DATABASE_ERROR)

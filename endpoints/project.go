@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/jesses-code-adventures/every_log/db"
@@ -11,7 +12,8 @@ import (
 )
 
 type ProjectHandler struct {
-	Db *db.Db
+	Db     *db.Db
+	Logger *log.Logger
 }
 
 func (p ProjectHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -57,7 +59,7 @@ func (p ProjectHandler) createProject(r *http.Request) ([]byte, error) {
 	}
 	err := json.NewDecoder(body).Decode(&parsedBody)
 	if err != nil {
-		fmt.Println(err) //TODO: Use a logger
+		p.Logger.Println(err)
 		return nil, errors.New(error_msgs.JSON_PARSING_ERROR)
 	}
 	resp, err := p.Db.CreateProject(user_id, parsedBody.Name, parsedBody.Description)
@@ -66,7 +68,7 @@ func (p ProjectHandler) createProject(r *http.Request) ([]byte, error) {
 	}
 	arr, err = json.Marshal(resp)
 	if err != nil {
-		fmt.Println(err) // TODO: Use a logger
+		p.Logger.Println(err)
 		return nil, errors.New(error_msgs.JSON_PARSING_ERROR)
 	}
 	return arr, err

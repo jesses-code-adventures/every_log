@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/jesses-code-adventures/every_log/db"
@@ -11,7 +12,8 @@ import (
 )
 
 type ApiKeyHandler struct {
-	Db *db.Db
+	Db     *db.Db
+	Logger *log.Logger
 }
 
 func (p ApiKeyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -34,7 +36,7 @@ func (p ApiKeyHandler) ServeJson(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, error_msgs.JsonifyError(error_msgs.GetRequiredMessage("project_id")), http.StatusBadRequest)
 			return
 		}
-		key, err := p.createApiKey(r, projectId)
+		key, err := p.createApiKey(r, projectId, p.Logger)
 		if err != nil {
 			fmt.Printf(fmt.Sprintf("got error: %s", err))
 			status := error_msgs.GetErrorHttpStatus(err)
@@ -48,7 +50,7 @@ func (p ApiKeyHandler) ServeJson(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (p ApiKeyHandler) createApiKey(r *http.Request, projectId string) ([]byte, error) {
+func (p ApiKeyHandler) createApiKey(r *http.Request, projectId string, logger *log.Logger) ([]byte, error) {
 	user_id := r.Header.Get("user_id")
 	if user_id == "" {
 		return nil, errors.New(error_msgs.USER_ID_REQUIRED)
@@ -60,7 +62,7 @@ func (p ApiKeyHandler) createApiKey(r *http.Request, projectId string) ([]byte, 
 	}
 	arr, err = json.Marshal(resp)
 	if err != nil {
-		fmt.Println(err) // TODO: Use a logger
+		logger.Println(err)
 		return nil, errors.New(error_msgs.JSON_PARSING_ERROR)
 	}
 	return arr, err

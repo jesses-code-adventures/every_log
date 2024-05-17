@@ -13,4 +13,6 @@ dev/scripts/create_test_project
 echo "creating test api key"
 dev/scripts/create_test_api_key
 echo "creating test org"
-cev/scripts/create_test_org
+dev/scripts/create_test_org
+echo "inviting second user to test org"
+dev/scripts/create_test_project_invite

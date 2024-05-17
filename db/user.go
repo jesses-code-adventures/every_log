@@ -11,16 +11,16 @@ import (
 func (db Db) CreateUser(email string, first_name string, last_name *string, password string) (string, error) {
 	tx, err := db.Db.Begin()
 	if err != nil {
-		fmt.Println(err) // TODO: Use a logger
+		db.Logger.Println(err)
 		return "", errors.New(error_msgs.DATABASE_ERROR)
 	}
 	var user_id string
 	err = tx.QueryRow("INSERT INTO single_user DEFAULT VALUES RETURNING id").Scan(&user_id)
 	if err != nil {
-		fmt.Println(err) // TODO: Use a logger
+		db.Logger.Println(err)
 		innerErr := tx.Rollback()
 		if innerErr != nil {
-			fmt.Println(innerErr) // TODO: Use a logger
+			db.Logger.Println(innerErr)
 			return "", errors.New(error_msgs.DATABASE_ERROR)
 		}
 		return "", errors.New(error_msgs.DATABASE_ERROR)
@@ -32,7 +32,7 @@ func (db Db) CreateUser(email string, first_name string, last_name *string, pass
 			fmt.Println(error_msgs.EMAIL_EXISTS)
 			innerErr := tx.Rollback()
 			if innerErr != nil {
-				fmt.Println(innerErr) // TODO: Use a logger
+				db.Logger.Println(innerErr)
 				return "", errors.New(error_msgs.DATABASE_ERROR)
 			}
 			return "", errors.New(error_msgs.EMAIL_EXISTS)
@@ -40,24 +40,24 @@ func (db Db) CreateUser(email string, first_name string, last_name *string, pass
 		fmt.Println(err)
 		innerErr := tx.Rollback()
 		if innerErr != nil {
-			fmt.Println(innerErr) // TODO: Use a logger
+			db.Logger.Println(innerErr)
 			return "", errors.New(error_msgs.DATABASE_ERROR)
 		}
 		return "", err
 	}
 	err = tx.QueryRow("UPDATE single_user SET pii_id = $1 WHERE id = $2 RETURNING id", pii_id, user_id).Scan(&user_id)
 	if err != nil {
-		fmt.Println(err) // TODO: Use a logger
+		db.Logger.Println(err)
 		innerErr := tx.Rollback()
 		if innerErr != nil {
-			fmt.Println(innerErr) // TODO: Use a logger
+			db.Logger.Println(innerErr)
 			return "", errors.New(error_msgs.DATABASE_ERROR)
 		}
 		return "", errors.New(error_msgs.DATABASE_ERROR)
 	}
 	err = tx.Commit()
 	if err != nil {
-		fmt.Println(err) // TODO: Use a logger
+		db.Logger.Println(err)
 		return "", errors.New(error_msgs.DATABASE_ERROR)
 	}
 	return user_id, nil

@@ -1,7 +1,7 @@
 package endpoints
 
 import (
-	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/jesses-code-adventures/every_log/db"
@@ -18,20 +18,21 @@ type ServerHandler struct {
 	dbUser       DbUserHandler
 	log          LogHandler
 	org          OrgHandler
+	Logger       *log.Logger
 }
 
-func NewServerHandler(db *db.Db) ServerHandler {
+func NewServerHandler(db *db.Db, logger *log.Logger) ServerHandler {
 	handler := ServerHandler{
 		db:           db,
-		user:         UserHandler{Db: db},
-		table:        TableHandler{Db: db},
-		check:        CheckHandler{Db: db},
-		authenticate: AuthenticationHandler{Db: db},
-		authorize:    AuthorizationHandler{Db: db},
-		project:      ProjectHandler{Db: db},
-		dbUser:       DbUserHandler{Db: db},
-		log:          LogHandler{Db: db},
-		org:          OrgHandler{Db: db},
+		user:         UserHandler{Db: db, Logger: logger},
+		table:        TableHandler{Db: db, Logger: logger},
+		check:        CheckHandler{Db: db, Logger: logger},
+		authenticate: AuthenticationHandler{Db: db, Logger: logger},
+		authorize:    AuthorizationHandler{Db: db, Logger: logger},
+		project:      ProjectHandler{Db: db, Logger: logger},
+		dbUser:       DbUserHandler{Db: db, Logger: logger},
+		log:          LogHandler{Db: db, Logger: logger},
+		org:          OrgHandler{Db: db, Logger: logger},
 	}
 	return handler
 }
@@ -40,7 +41,7 @@ func (s *ServerHandler) HandleAuthMiddleware(w http.ResponseWriter, r *http.Requ
 	err := s.authorize.Authorize(w, r)
 	if err != nil {
 		//TODO: should http headers be set here?
-		fmt.Println("got auth middleware error: ", err)
+		s.Logger.Println("got auth middleware error: ", err)
 		return
 	}
 	handler.ServeHTTP(w, r)

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"time"
 
@@ -12,7 +13,8 @@ import (
 )
 
 type LogHandler struct {
-	Db *db.Db
+	Db     *db.Db
+	Logger *log.Logger
 }
 
 func (p LogHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -73,7 +75,7 @@ func (p LogHandler) create(r *http.Request) ([]byte, error) {
 	}
 	err := json.NewDecoder(body).Decode(&parsedBody)
 	if err != nil {
-		fmt.Println(err) //TODO: Use a logger
+		p.Logger.Println(err)
 		return nil, errors.New(error_msgs.JSON_PARSING_ERROR)
 	}
 	resp, err := p.Db.CreateLog(userId, parsedBody.ProjectId, parsedBody.LevelId, parsedBody.ProcessId, parsedBody.Message, parsedBody.Traceback, apiKey)
@@ -82,7 +84,7 @@ func (p LogHandler) create(r *http.Request) ([]byte, error) {
 	}
 	arr, err = json.Marshal(resp)
 	if err != nil {
-		fmt.Println(err) // TODO: Use a logger
+		p.Logger.Println(err)
 		return nil, errors.New(error_msgs.JSON_PARSING_ERROR)
 	}
 	return arr, err
@@ -108,7 +110,7 @@ func (p LogHandler) get(r *http.Request) ([]byte, error) {
 	}
 	err := json.NewDecoder(body).Decode(&parsedBody)
 	if err != nil {
-		fmt.Println(err) //TODO: Use a logger
+		p.Logger.Println(err)
 		return nil, errors.New(error_msgs.JSON_PARSING_ERROR)
 	}
 	resp, err := p.Db.GetLogs(userId, parsedBody.ProjectId, parsedBody.LevelId, parsedBody.ProcessId, parsedBody.OrgId, parsedBody.From, parsedBody.To)
@@ -117,7 +119,7 @@ func (p LogHandler) get(r *http.Request) ([]byte, error) {
 	}
 	arr, err = json.Marshal(resp)
 	if err != nil {
-		fmt.Println(err) // TODO: Use a logger
+		p.Logger.Println(err)
 		return nil, errors.New(error_msgs.JSON_PARSING_ERROR)
 	}
 	return arr, err

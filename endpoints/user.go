@@ -3,7 +3,7 @@ package endpoints
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/jesses-code-adventures/every_log/db"
@@ -11,7 +11,8 @@ import (
 )
 
 type UserHandler struct {
-	Db *db.Db
+	Db     *db.Db
+	Logger *log.Logger
 }
 
 func (u UserHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -56,7 +57,7 @@ func (u UserHandler) createUser(r *http.Request) ([]byte, error) {
 	}
 	err := json.NewDecoder(body).Decode(&request)
 	if err != nil {
-		fmt.Println(err) // TODO: Use a logger
+		u.Logger.Println(err)
 		return arr, errors.New(error_msgs.JSON_PARSING_ERROR)
 	}
 	id, err := u.Db.CreateUser(request.Email, request.FirstName, request.LastName, request.Password)
@@ -70,7 +71,7 @@ func (u UserHandler) createUser(r *http.Request) ([]byte, error) {
 	}
 	jsonBytes, err := json.Marshal(response)
 	if err != nil {
-		fmt.Println(err) // TODO: Use a logger
+		u.Logger.Println(err)
 		return nil, errors.New(error_msgs.JSON_PARSING_ERROR)
 	}
 	return jsonBytes, nil
